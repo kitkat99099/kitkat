@@ -1,4 +1,4 @@
-Task 1: Data Objects (150 Points)
+Task 1: Data Objects
 
 Subtask 1: Create a tablespace.
 
@@ -6,7 +6,6 @@ a. Create the tbs tablespace in /home/omm/tbs.
 
 Screenshots:
 a. Take a screenshot of the command and save the image as 1-1-1 createTBS.
-
 -------------------
 CREATE TABLESPACE tbs 
   LOCATION '/home/omm/tbs';
@@ -56,8 +55,6 @@ c. CREATE TABLE teacher (
 d. INSERT INTO teacher (teacher_id, name, age) VALUES (1, 'Alice', 30);
 INSERT INTO teacher (teacher_id, name, age) VALUES (2, 'Bob', 45);
 INSERT INTO teacher (teacher_id, name, age) VALUES (3, 'Charlie', 38);
-
-
 --------------------
 
 ############
@@ -150,7 +147,6 @@ CREATE SCHEMA test_schema;
 
 --------------------
 
-
 ##############
 Subtask 3: Create a data table.
 
@@ -189,7 +185,6 @@ c. CREATE TABLE score (
 );
 
 --------------------
-
 
 ################
 
@@ -242,7 +237,6 @@ CREATE TABLE test_list_part_p3 PARTITION OF test_list_part
 
 --------------------
 
-
 ###############
 Subtask 5: Modify the data table.
 
@@ -272,7 +266,6 @@ c. ALTER TABLE student ALTER COLUMN sname SET NOT NULL;
 \d+ student
 
 --------------------
-
 
 ##################
 Subtask 6: Modify a partitioned table.
@@ -304,8 +297,6 @@ c. CREATE TABLE p_new PARTITION OF test_list_part
 
 \d+ test_list_part
 --------------------
-
-
 
 ##################
 
@@ -354,7 +345,6 @@ WHERE ssex = 'm';
 
 --------------------
 
-
 ##################
 Subtask 9: Add a comment to a table. 
 
@@ -373,7 +363,6 @@ COMMENT ON COLUMN student.spec IS 'not used column';
 
 --------------------
 
-
 ################
 Subtask 10: Create a function.
 
@@ -390,7 +379,6 @@ $$ LANGUAGE SQL;
 
 SELECT test_func(4, 6);
 --------------------
-
 
 #################
 Subtask 11: Modify a function.
@@ -473,7 +461,6 @@ b. SELECT ssex, COUNT(*) AS count FROM student GROUP BY ssex;
 c. SELECT AVG(sage) AS average_age FROM student;
 --------------------
 
-
 ###############
 Subtask 14: Jointly query multiple tables.
 
@@ -523,7 +510,6 @@ WHERE NOT EXISTS (
 );
 --------------------
 
-
 ###############
 Subtask 15: Modify data.
 
@@ -553,7 +539,6 @@ WHERE sno = (SELECT sno FROM student WHERE sname = 'Rose');
 
 SELECT * FROM score WHERE grade = 80;
 --------------------
-
 
 ###############
 Subtask 16: Delete data.
