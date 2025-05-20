@@ -1,0 +1,929 @@
+
+--> lec-2  Database and Object Management
+
+--> Create a tablespace
+create tablespace test_tbs LOCATION '/opt/opengauss/tablespace/test_tbs1';
+
+--> Create a user
+create user jack IDENTIFIED BY 'xxxxxxxx'; 
+
+--> grant the user the permissions to access the test_tbs tablespace. 
+GRANT CREATE ON TABLESPACE test_tbs TO jack; 
+
+--> Create a table in the test_tbs tablespace
+create table test (id int) tablespace test_tbs; 
+
+--> Check the pg_tablespace system catalog.  
+SELECT spcname FROM pg_tablespace; 
+
+--> View all the tablespaces defined by the system and users. 
+\db 
+
+--> Query the tablespace usage.
+-> Query the current usage of the tablespace. The result indicates the size of the tablespace, in bytes.
+SELECT PG_TABLESPACE_SIZE('test_tbs'); 
+
+--> Modify the tablespace.
+->Run the following command to rename the tablespace:
+ALTER TABLESPACE test_tbs RENAME TO test_tbs1;
+
+--> Delete a tablespace.  # abe table bsretawa amja tablespace asretawa
+drop table test; 
+drop tablespace test_tbs1; 
+
+---> Creating, Viewing, Modifying, and Deleting a Database:
+--> Create the testdb database in the db_tbs tablespace. 
+CREATE DATABASE testdb with  TABLESPACE = db_tbs;
+
+--> View a database. 
+1) SELECT datname FROM pg_database;
+2)  \l 
+
+---> Modify a database.
+--> Modify the default search path of the database. 
+ALTER DATABASE testdb SET search_path TO pa_catalog,public;
+
+--> Change the database tablespace. 
+ALTER DATABASE testdb SET tablespace db_tbs1;
+
+--> Rename the database. 
+ALTER DATABASE testdb RENAME TO testdb1; 
+
+--> Delete a database. 
+DROP DATABASE testdb1;
+
+---> Creating, Viewing, Modifying, and Deleting Row-store Tables, Column-store Tables, and MOTs 
+--> Create a row-store table. By default, the table is a row-store table, that is, WITH (ORIENTATION = ROW) can be omitted.
+CREATE TABLE PART 
+( .... ) 
+WITH (ORIENTATION = ROW); 
+
+--> Create a column-store table.
+CREATE TABLE PART1 
+( ..... ) 
+WITH (ORIENTATION = COLUMN);
+
+--> View the table information. 
+\d
+
+---> Modify table attributes. 
+--> Adds a column. 
+ALTER TABLE part ADD COLUMN p_col1 bigint;
+
+--> Add the default value in the column. 
+ALTER TABLE part ALTER COLUMN p_col1 SET DEFAULT 1;
+
+--> Delete the default value in the column. 
+ALTER TABLE part ALTER COLUMN p_col1 drop DEFAULT ;
+
+--> Change the data type of a column. 
+ALTER TABLE part MODIFY p_col1 INT;
+
+--> Rename a column. 
+ ALTER TABLE part RENAME p_col1 to p_col; 
+
+--> Deletes a column. 
+ALTER TABLE part DROP COLUMN p_col; 
+
+--> Create an MOT. 
+ create FOREIGN table test(x int) ;  # agar ama erorr ya ama awam code anwsen la omm'akaya
+-> gs_guc set -N all -I all -c "enable_incremental_chec=off"
+
+--> Create an index for the MOT. 
+create index  text_index1 on test(x) ;
+
+--> Delete a table. 
+DROP TABLE PART; 
+
+---> User, Role, and Schema Management 
+--> Check the user list. 
+ SELECT * FROM pg_user; 
+
+--> For a user having the Create Database permission, add the CREATEDB keyword: 
+CREATE USER dim CREATEDB PASSWORD 'Bigdata@123';
+
+--> Change the login password of jim from Bigdata@ to Abcd@123.
+ALTER USER jim IDENTIFIED BY 'Abcd@123' REPLACE 'Bigdata@123';
+
+--> Grant the CREATEROLE permission to user jim.
+ ALTER USER jim CREATEROLE; 
+
+--> Lock the jim account: 
+ALTER USER jim ACCOUNT LOCK; 
+
+--> Unlock the jim account. 
+ALTER USER jim ACCOUNT UNLOCK; 
+
+--> Delete a user.
+DROP USER jim CASCADE;
+
+---> Role Management
+--> Create role manager whose password is Bigdata123@.
+CREATE ROLE manager IDENTIFIED BY 'Bigdata@123'; 
+
+--> Create a role. The role takes effect from July 1, 2020 and expires on December 1, 2020. 
+CREATE ROLE miriam WITH LOGIN PASSWORD 'Bigdata@123' VALID BEGIN '2020-07-01' VALID UNTIL '2020-12-01'; 
+
+--> Change role manager to the system administrator: 
+ALTER ROLE manager SYSADMIN; 
+
+--> Delete the role manager. 
+DROP ROLE manager;
+
+--> View the roles. 
+SELECT * FROM PG_ROLES; 
+
+---> Schema Management 
+--> Create the ds schema
+ CREATE SCHEMA ds;
+
+--> Rename the ds schema to ds_new.
+ALTER SCHEMA ds RENAME TO ds_new;
+
+--> Create a user named jack. 
+CREATE USER jack PASSWORD 'Bigdata@123'; 
+
+--> Change the owner of ds_new to jack. 
+ALTER SCHEMA ds_new OWNER TO jack; 
+
+--> View the schema owner.
+SELECT s.nspname,u.usename AS nspowner FROM pg_namespace s, pg_user u WHERE s.nspowner = u.usesysid; 
+
+--> Delete user jack and the ds_new schema
+ DROP SCHEMA ds_new;
+ DROP USER jack; 
+
+---> Granting System Permissions to Users or Roles
+--> user joe and grant the sysadmin permissions to the user.
+Create CREATE USER joe PASSWORD 'Bigdata@123';
+ALTER USER joe with sysadmin;
+
+---> Granting Database Object Permissions to Roles or Users
+--> Revoke the sysadmin permission of user joe,
+ALTER USER joe with nosysadmin; 
+-->  create the tpcds schema
+CREATE SCHEMA tpcds;
+--> create a reason table for the tpcds schema
+ CREATE TABLE tpcds.reason 
+( .... );
+--> Grant the usage permission on the tpcds schema
+GRANT USAGE ON SCHEMA tpcds TO joe;
+--> all the permissions on the tpcds.reason table to the user joe.
+GRANT ALL PRIVILEGES ON tpcds.reason TO joe;
+
+--> Grant the query permission on r_reason_sk, r_reason_id, and r_reason_desc columns and 
+the update permission on the r_reason_desc column in the tpcds.reason table to user joe. 
+GRANT select (r_reason_sk,r_reason_id,r_reason_desc),update (r_reason_desc) ON tpcds.reason TO joe; 
+
+--> Grant the postgres database connection permission and schema creation permission to user 
+joe, and enable this user to grant these permissions to other users. 
+GRANT create,connect on database postgres TO joe WITH GRANT OPTION; 
+
+--> Create role tpcds_manager, grant the tpcds schema access permission and object creation 
+permission to this role, but do not enable this role to grant these permissions to others.
+CREATE ROLE tpcds_manager PASSWORD 'Bigdata@123'; 
+GRANT USAGE,CREATE ON SCHEMA tpcds TO tpcds_manager; 
+
+---> Granting the Permissions of One User or Role to Others 
+--> Create the manager role, grant joe's permissions to manager
+CREATE ROLE manager PASSWORD 'Bigdata@123'; 
+--> allow manager to grant these permissions to others
+GRANT joe TO manager WITH ADMIN OPTION; 
+
+--> grant manager's permissions to senior_manager.
+ GRANT manager TO senior_manager; 
+
+---> Revoking Permissions
+--> Revoke permissions and delete users. 
+REVOKE manager FROM joe; 
+REVOKE senior_manager FROM manager;
+DROP USER manager; 
+REVOKE ALL PRIVILEGES ON tpcds.reason FROM joe;
+REVOKE ALL PRIVILEGES ON SCHEMA tpcds FROM joe; 
+REVOKE USAGE,CREATE ON SCHEMA tpcds FROM tpcds_manager;
+DROP ROLE tpcds_manager; 
+DROP ROLE senior_manager;
+DROP USER joe CASCADE; 
+
+---> Data Import and Export
+---> Creating a Backup Directory
+--> Create a backup directory as user omm.
+mkdir /gaussdb/backup 
+cd /gaussdb/backup 
+
+--> Creating a Table and Inserting Data
+->  CREATE TABLE customer_t1 
+postgres-# ( 
+postgres(#     c_customer_sk             integer, 
+postgres(#     c_customer_id             char(5), 
+postgres(#     c_first_name              char(6), 
+postgres(#     c_last_name               char(8) 
+postgres(# ); 
+
+NSERT INTO customer_t1 (c_customer_sk, c_customer_id, c_first_name) VALUES 
+postgres-# (3769, 'hello', DEFAULT) , 
+postgres-#     (6885, 'maps', 'Joes'), 
+postgres-#     (4321, 'tpcds', 'Lily'), 
+postgres-# (9527, 'world', 'James'); 
+
+--> View data in the customer_t1 table
+select * from customer_t1; 
+
+--> Display information about the current table
+\d 
+
+---> Exporting Data Using the copy Command
+-> Switch to the default user omm. 
+\c - omm 
+-> Run the copy command to export data.
+copy customer_t1 to '/gaussdb/backup/copy_cost.txt' delimiter '^';
+\q 
+-> View the exported file.  ama la omm anawse
+cd /gaussdb/backup/ 
+ll
+-> Exporting Data Using the gs_dump Command 
+gs_dump -U omm -W Bigdata@123 -f /gaussdb/backup/gsdump_post.sql -p 26000 postgres -F p 
+
+--> Use gs_dump to export the postgres database data in .tar format.
+gs_dump -U omm -W Bigdata@123 -f /gaussdb/backup/gsdump_post.tar -p 26000 postgres -F t 
+ll
+
+--> Use gs_dump to export tables-dependent views.
+-> Connect to the database, create the vw_customer_t1 view that depends on the customer_t1 table, and exit.
+gsql -d postgres -p 26000 –r 
+create view vw_customer_t1 as select * from customer_t1 limit 2; 
+\q
+-> Export the vw_customer_t1 view that depends on the customer_t1 table. 
+gs_dump -s -p 26000 postgres -t PUBLIC.customer_t1 --include-depend-objs --exclude self -f /gaussdb/backup/view_cust.sql -F p
+
+--> Exporting Data Using the gs_dumpall Command
+-> Use gs_dumpall to export all openGauss databases at a time. 
+gs_dumpall -f  /gaussdb/backup/gsdumpall.sql -p 26000
+
+--> Importing Data Using the gsql Command
+-> Delete the exported tables.
+gsql -p 26000 postgres -r 
+drop table joe.mytable;
+drop table public.customer_t1 cascade; 
+\q 
+
+-> Use gsql to restore the exported table. (Ignore "ERROR:  schema "joe" already exists".) 
+gsql -p 26000 postgres -r -f /gaussdb/backup/gsdump_post.sql 
+-> Check the restored table.
+gsql -p 26000 postgres -r 
+select * from joe.mytable;
+select * from public.customer_t1;
+\q 
+
+--> Importing Data Using the copy Command 
+-> Delete the tables that have been exported by running the copy command
+gsql -p 26000 postgres -r 
+truncate table public.customer_t1; 
+-> Run the copy command to import data. 
+copy customer_t1 from '/gaussdb/backup/copy_cost.txt' delimiter '^';
+-> View the imported table data.
+select * from customer_t1; 
+
+--> Importing Data Using the gs_restore Command
+-> Delete the tables and views exported using gs_dump. 
+gsql -p 26000 postgres -r 
+drop table joe.mytable; 
+drop table public.customer_t1;
+-> Use gs_restore to import data from the gsdump_post.tar file to the tpcc database. 
+create database tpcc; 
+\q
+-> Import data from the gsdump_post.tar file to the tpcc database. 
+gs_restore /gaussdb/backup/gsdump_post.tar -p 26000 -d tpcc 
+-> Log in to the tpcc database and view the restored data.
+gsql -p 26000 tpcc -r
+select * from public.customer_t1;
+select * from joe.mytable; 
+
+--> Clearing the Lab Environment 
+-> Delete the created database user. 
+gsql -p 26000 postgres -r
+\l
+ drop database tpcc; 
+\du
+drop user joe;
+\q
+
+
+// lec 3 \\
+
+--> Querying Data 
+-->Use an asterisk (*) after SELECT to query all columns in the bank_card table. 
+SELECT * FROM bank_card;   
+
+--> Check the bank card number and card type in the bank_card table.
+SELECT b_number,b_type FROM bank_card;
+
+--> View the ID, name, email address, and bank card number of customer 1.
+SELECT a.c_id,a.c_name, a.c_mail, b.b_number FROM client a, bank_card b where a.c_id= 1 and b.b_c_id = 1; 
+
+ -->  Use an alias. 
+SELECT b_c_id AS CardID, b_type CardType FROM bank_card; 
+
+--> Conditional Query 
+--> Query information about a credit card in the bank_card table
+SELECT * FROM bank_card WHERE b_type= 'Credit Card'; 
+
+
+-->  Query information about a credit card whose customer ID is 1 from the bank_card table. 
+SELECT * FROM bank_card where b_c_id= 1and b_type='Credit Card'; 
+
+---> Join Query
+-->  Use an inner join to query tables. Query the customer ID, bank card number, and bank card type. 
+-> Use the (c_id) column of the client and bank_card tables to perform the query operation.
+SELECT c.c_id, b.b_number, b.b_type FROM client c JOIN bank_card b ON (b.b_c_id = c.c_id); 
+
+-->  Use the left outer join to query the customer ID, user name, bank card number, and bank card type. 
+SELECT c.c_id,c.c_name, b.b_number,b.b_type FROM client c left join bank_card b on c.c_id=b.b_c_id;                          
+
+--> Use the right outer join to query data in the client and bank_card tables.
+SELECT c.c_id,c.c_name, b.b_number,b.b_type FROM client c right join bank_card b on c.c_id =b.b_c_id;                        
+
+--> Obtain the full join data of the client and bank_card tables through a full join. 
+SELECT c.c_id,c.c_name, b.b_number,b.b_type FROM client c FULL JOIN bank_card b ON (b.b_c_id = c.c_id); 
+
+---> Data Sorting
+--> Query the names, amounts, and target people of insurances with insurance numbers higher than 2 in descending order.
+SELECT i_name,i_amount,i_person FROM insurance WHERE i_id>2 ORDER BY i_amount DESC; 
+
+---> Data Limit 
+--> Query the insurance information in the following table. Add LIMIT 2 OFFSET 1 to skip the first row and query a total of two rows
+SELECT i_name, i_id, i_amount, i_person FROM insurance LIMIT 2 OFFSET 1; 
+
+---> Updating Data 
+--> Insert data into the bank_card table.
+INSERT INTO bank_card(b_number, b_type, b_c_id) VALUES ('6222022302020000030','Savings Card', 30); 
+INSERT INTO bank_card(b_number, b_type, b_c_id) VALUES ('6222022302020000031','Savings Card', 31); 
+INSERT INTO bank_card(b_number, b_type, b_c_id) VALUES ('6222022302020000032','Savings Card', 32);  
+
+-->  Insert all data from the bank_card table into the bank_card1 table using a subquery.
+CREATE TABLE bank_card1(b_number NCHAR(30) PRIMARY KEY, b_type NCHAR(20), b_c_id INT NOT NULL); 
+INSERT INTO bank_card1 SELECT * FROM bank_card; 
+
+-->  Insert a record and update a value for columns in which this primary key is a duplicate. 
+INSERT INTO bank_card VALUES ('6222022302020000001', 'Credit Card', 1) ON DUPLICATE KEY UPDATE b_type = 'Savings Card';
+
+
+--> Query records in the bank_card table. 
+SELECT * FROM bank_card;  
+
+-->  Update the record whose customer ID is 1 in the bank_card table and change the value of b_type to Credit Card. 
+UPDATE bank_card SET bank_card.b_type = 'Credit Card' where b_c_id=1; 
+
+---> Deleting Data 
+--> Delete the records, whose b_type is Credit Card and b_c_id is 1, from the bank_card table
+DELETE FROM bank_card WHERE b_type='Credit Card' AND b_c_id=1; 
+
+--> Query records in the bank_card table.
+SELECT * FROM bank_card;                                                                                                     
+
+-->  Delete all data from the bank_card table.
+DELETE FROM bank_card; 
+
+--> Query records in the bank_card table.
+SELECT * FROM bank_card;   
+
+---> Defining Data
+--> Change the maximum number of connections to database music.
+ALTER DATABASE music WITH CONNECTION LIMIT 30; 
+
+--> Rename the database. 
+ALTER DATABASE music RENAME TO music01; 
+
+--> Change the default tablespace of the database. 
+CREATE TABLESPACE tablespace01 RELATIVE LOCATION 'tablespace01/tablespace_01'; 
+ALTER DATABASE music01 SET TABLESPACE tablespace01;
+
+--> Change the database owner
+ALTER DATABASE music01 OWNER TO jim01; 
+
+---> Deleting a Database
+--> Delete a database.
+DROP DATABASE music01; 
+
+--> Delete users. 
+DROP USER jim;  
+DROP USER jim01; 
+
+---> Defining a Schema 
+--> Rename the schema.
+ALTER SCHEMA role1 RENAME TO role1_new;  
+
+--> Change the owner of the schema. 
+ALTER SCHEMA role1_new OWNER TO jack; 
+
+-->  Deleting a Schema 
+DROP SCHEMA role1_new; 
+
+--->  Defining a Table
+--> Temporary table 
+CREATE TEMPORARY TABLE bank_card2(b_number NCHAR(30) PRIMARY KEY, b_type NCHAR(20),b_c_id INT NOT NULL); 
+
+--> Rename the bank_card table to bank_card1. 
+ALTER TABLE bank_card RENAME TO bank_card1; 
+
+--> Add a column to the bank_card1 table. The data type is Integer.
+ALTER TABLE bank_card1 ADD full_masks INTEGER; 
+
+-->  Change the data type of a column. 
+ALTER TABLE bank_card1 MODIFY full_masks NVARCHAR2(20);
+
+--> Add a constraint. 
+ALTER TABLE bank_card1 ADD CONSTRAINT ck_bank_card CHECK(b_c_id>0); 
+ALTER TABLE bank_card1 ADD CONSTRAINT uk_bank_card UNIQUE(full_masks); 
+
+--> Delete a column.
+ALTER TABLE bank_card1 DROP full_masks; 
+
+-->  Insert data into a table. If the constraint is not met, an error is reported. 
+INSERT INTO bank_card1(b_number, b_type, b_c_id) VALUES ('6222022302020000001','Credit Card', 0); 
+
+---> Deleting Data from a Table
+-->  Delete all rows from the bank_card1 table. 
+DELETE FROM bank_card1; 
+
+-->  Deleting a Table 
+DROP TABLE IF EXISTS bank_card1; 
+
+---> Defining a Partitioned Table
+--> Create a tablespace and a partitioned table
+CREATE TABLESPACE example1 RELATIVE LOCATION 'tablespace1/tablespace_1'; 
+
+--> Modify a tablespace of a partitioned table
+ALTER TABLE bank_card MOVE PARTITION bank_card1 TABLESPACE example3;  
+
+-->  Rename the partitioned table. 
+ALTER TABLE bank_card RENAME PARTITION bank_card1 TO bank_card5; 
+
+--> Combine partitions.
+ALTER TABLE bank_card MERGE PARTITION bank_card1, bank_card2 INTO PARTITION bank_card3;  
+
+--> Delete a partition
+ALTER TABLE bank_card DROP PARTITION bank_card4;
+
+---> Creating an Index
+-->  Create an index on b_number, b_type in the bank_card table.
+CREATE INDEX idx_bank_card ON bank_card(b_number ASC,b_type);
+
+--> Create the education partitioned table. 
+ CREATE TABLE education(staff_id INTEGER NOT NULL, higest_degree CHAR(8), graduate_school 
+VARCHAR(64),graduate_date DATETIME, education_note VARCHAR(70)) 
+PARTITION BY LIST(higest_degree) 
+( 
+PARTITION doctor VALUES ('Doctor'), 
+PARTITION master VALUES ('Master'), 
+PARTITION undergraduate VALUES ('Bachelor') 
+);
+
+-->  Create a partitioned index with the name of the index partition specified. 
+CREATE INDEX idx_education ON education(staff_id ASC, higest_degree) LOCAL (PARTITION doctor, PARTITION master, PARTITION undergraduate); 
+
+---> Modifying an Index 
+--> Rebuild the index. 
+ALTER INDEX idx_bank_card REBUILD;
+
+--> Rename an index.
+ALTER INDEX idx_bank_card RENAME TO idx_bank_card_temp; 
+
+--> Set an index as unusable.
+ALTER INDEX idx_bank_card UNUSABLE; 
+
+--> Delete the idx_bank_card index from the bank_card table.
+DROP INDEX idx_bank_card; 
+
+--> Run the CREATE VIEW command to create a view. 
+CREATE OR REPLACE VIEW privilege_view AS SELECT b_number, b_type FROM bank_card; 
+
+--> Query the data in the view. The syntax is the same as that for querying a table. 
+SELECT * FROM privilege_view; 
+
+--> Query the view structure
+\d privilege_view; 
+
+--> Creating a Sequence 
+CREATE SEQUENCE seq_auto_extend START WITH 10 MAXVALUE 200 INCREMENT BY 2 CYCLE; 
+
+--> Query the next value of seq_auto_extend.
+SELECT seq_auto_extend.NEXTVAL FROM DUAL; 
+
+---> Modifying a Sequence
+-->  Set INCREMENT BY to 4 and MAXVALUE to 400. 
+ALTER SEQUENCE seq_auto_extend MAXVALUE 400 INCREMENT BY 4 CYCLE; 
+
+--> Delete the seq_auto_extend sequence.
+DROP SEQUENCE IF EXISTS seq_auto_extend; 
+
+--> Arithmetic Functions and Operators 
+SELECT 2+3,2*3, @ -5.0, 2.0^3.0, |/ 25.0, 91&15, 17#5,1<<4 AS RESULT; 
+SELECT abs(-10),cos(0),sin(0),acos(1),asin(0); 
+
+-->  bitand(exp1,exp2) performs an AND (&) operation on two digits. 
+SELECT bitand(29,15); 
+
+--> Time and date operators (–)
+SELECT date '2022-5-28' + integer '7' AS RESULT; 
+SELECT date '2022-05-28' + interval '1 hour' AS RESULT;  
+SELECT date '2022-05-28' + time '03:00' AS RESULT;  
+SELECT interval '1 day' + interval '1 hour' AS RESULT;  
+SELECT date '2022-05-01' - date '2022-04-28' AS RESULT;  
+SELECT date '2022-05-01' - integer '7' AS RESULT;  
+SELECT date '2022-05-28' - interval '1 hour' AS RESULT;  
+SELECT time '05:00' - interval '2 hours' AS RESULT;  
+SELECT age(timestamp '2001-04-10', timestamp '1957-06-13'); 
+SELECT current_time; 
+
+--> Type Conversion Functions
+SELECT to_char(125, '999'),to_clob('hello111'::CHAR(15)),to_date('05 Dec 2000', 'DD Mon YYYY'), 
+to_number('12,454.8-', '99G999D9S'); 
+
+-->  cast(x as y) converts x to the type specified by y. 
+SELECT cast('22-oct-1997' as timestamp); 
+
+-->  hextoraw(string) converts a hexadecimal string to RAW. 
+SELECT hextoraw('7D');
+
+// lec 4 \\
+skip
+
+// lec 5 \\
+
+---> Database Connection Settings
+--> Modify the pg_hba.conf file of the database
+cd /gaussdb/data 
+vi pg_hba.conf
+
+--> Change the database listening address.   step by step
+cd /gaussdb/data 
+vi postgresql.conf
+#listen_addresses = '192.168.0.19'              
+#what IP address(es) to listen on; 
+listen_addresses = '*'
+gs_guc set -N all -I all -c "listen_addresses='*'" 
+
+--> Restart the database to make the modification take effect. 
+gs_ctl restart -D /gaussdb/data/ 
+
+---> Creating a Database and a Schema
+--> Run the meta-command to view the database.
+\l 
+
+--> Change the default schema search path of the finance database to public and finance. 
+ALTER DATABASE finance SET search_path TO finance,public; 
+
+--> View the default schema search path of the finance database. 
+show search_path 
+
+--> Exit the database. 
+\q 
+
+---> Creating and Configuring a Tablespace
+--> Run the meta-command to view the tablespace. .
+\db 
+
+--> Query the current usage of the tablespace. The result indicates the size of the tablespace, in bytes. 
+SELECT PG_TABLESPACE_SIZE('finance_tbs'); 
+
+--> Set the created tablespace to the default tablespace of the finance database
+ALTER DATABASE finance SET tablespace finance_tbs; 
+
+--> Modify the default tablespace of the finance database again. 
+ALTER DATABASE finance SET tablespace finance_tbs; 
+
+---> Creating a User and Granting Permissions to It
+--> Grant the SCHEMA permission to the bank_app user. 
+GRANT ALL ON SCHEMA finance to bank_app;
+
+---> Connecting to a Database as a New User 
+gsql -d finance -U bank_app -p 26000 -r 
+
+--> Access the bank_card table in the finance database.
+\du; 
+
+--> Set the default search path to finance.
+SET search_path TO finance;  
+
+--> Check search_path. 
+show search_path; 
+
+---> Creating a Data Table 
+--> View the created tables.
+\d+;
+
+---> Inserting Data Into a Table
+INSERT INTO finance.property(pro_id,pro_c_id,pro_pif_id,pro_type,pro_status,pro_quantity,pro_income,pro_purchase_time) VALUES 
+(2,10,2,2,'available',4,8000,'2018-07-01'); 
+
+---> Inserting a Data Record Manually
+--> Values of c_id_card and c_phone are not unique. 
+INSERT INTO finance.client(c_id,c_name,c_mail,c_id_card,c_phone,c_password) VALUES (31,'Li 
+Li','lili@huawei.com','340211199301010005','18815650005','gaussdb_005') 
+
+--> Add information about a customer to the client table in the finance database to meet the 
+constraints in the table (in a scenario where the insertion succeeds).
+INSERT INTO finance.client(c_id,c_name,c_mail,c_id_card,c_phone,c_password) VALUES (31,'Li 
+Li','lili@huawei.com','340211199301010031','18815650031','gaussdb_031')
+
+--> Verify the insertion result. 
+select * from finance.client where c_id=31; 
+
+---> Adding a Constraint
+-->Add a foreign key constraint to the bank_card table.
+ALTER TABLE finance.bank_card ADD CONSTRAINT fk_c_id FOREIGN KEY (b_c_id) REFERENCES finance.client(c_id) ON DELETE CASCADE; 
+
+--> Add a foreign key constraint to the property table. 
+ALTER TABLE finance.property ADD CONSTRAINT fk_pro_c_id FOREIGN KEY (pro_c_id) REFERENCES finance.client(c_id) ON DELETE CASCADE; 
+
+--> Add a constraint that the value of the f_amount column is greater than or equal to 0 to the fund table. 
+ALTER table finance.fund ADD CONSTRAINT c_f_mount CHECK (f_amount >=0); 
+
+---> Add a constraint to the insurance table. 
+-->Add a constraint that the value of the i_amount column is greater than or equal to 0 to the insurance table. 
+ALTER table finance.insurance ADD CONSTRAINT c_i_mount CHECK (i_amount >=0); 
+
+---> Querying Data
+--> Query wealth management products.
+SELECT * from finance.finances_product; 
+
+---> Perform a conditional query. 
+--> Query available property data in the property table. 
+SELECT * from finance.property where pro_status='available'; 
+
+---> Perform an aggregation query. 
+--> Check the number of customers in the client table.
+SELECT count(*) FROM finance.client; 
+
+--> Query the numbers of debit cards and credit cards in the bank_card table.
+SELECT b_type,COUNT(*) FROM finance.bank_card GROUP BY b_type; 
+
+--> Query the average insurance amount in the insurance table.
+SELECT AVG(i_amount) FROM finance.insurance; 
+
+--> Query the insurance type and amount corresponding to the maximum and minimum insurance amounts in the insurance table. 
+SELECT i_name,i_amount from finance.insurance where i_amount in (select max(i_amount) from finance.insurance) union
+SELECT i_name,i_amount from finance.insurance where i_amount in (select min(i_amount) from finance.insurance); 
+
+--> The semi-join query is performed to query the customer ID, name, and ID card number in the bank_card table. 
+SELECT c_id,c_name,c_id_card FROM finance.client WHERE EXISTS (SELECT * FROM finance.bank_card WHERE client.c_id = bank_card.b_c_id); 
+
+--> The anti-join query is performed to query the customer ID, name, and ID card number of a 
+--> customer whose bank card number is not 622202230202000001* (* means unknown). 
+SELECT c_id,c_name,c_id_card FROM finance.client WHERE c_id NOT IN (SELECT b_c_id FROM finance.bank_card 
+WHERE b_number LIKE '622202230202000001_'); 
+
+---> Perform a subquery. 
+--> The subquery is performed to query the names of insurance products whose insurance amount 
+is greater than the average amount and the target people. 
+SELECT i1.i_name,i1.i_amount,i1.i_person FROM finance.insurance i1 WHERE i_amount > (SELECT avg(i_amount) 
+FROM finance.insurance i2); 
+
+---> Perform a query by using the ORDER BY clause. 
+--> Query the names, amounts, and target people of insurances with insurance numbers higher than 2 in descending order. 
+SELECT i_name,i_amount,i_person FROM finance.insurance WHERE i_id>2 ORDER BY i_amount DESC; 
+
+---> Perform a query by using the GROUP BY clause. 
+--> Query the total number of wealth management products and group them by p_year. 
+SELECT p_year,count(p_id) FROM finance.finances_product GROUP BY p_year; 
+
+--> Query the number of customers whose insurance amount is 2
+SELECT i_person,count(i_amount) FROM finance.insurance GROUP BY i_person HAVING count(i_amount)=2; 
+
+---> Perform a query by using the WITH AS clause. 
+--> WITH AS is used to query the fund table.
+WITH temp AS (SELECT f_name,ln(f_amount) FROM finance.fund ORDER BY f_manager DESC) SELECT * FROM temp; 
+
+---> View
+--> Create a view for querying the ID, name, and ID card number of a customer in the bank_card table. 
+CREATE VIEW finance.v_client as SELECT c_id,c_name,c_id_card FROM finance.client WHERE EXISTS (SELECT * 
+FROM finance.bank_card WHERE client.c_id = bank_card.b_c_id);  
+
+--> Perform a query by using the view. 
+SELECT * FROM finance.v_client; 
+
+---> Modify the view. 
+--> The view is modified to filter out credit card holders based on the original query result.
+CREATE OR REPLACE VIEW finance.v_client as SELECT c_id,c_name,c_id_card FROM finance.client WHERE EXISTS 
+(SELECT * FROM finance.bank_card WHERE client.c_id = bank_card.b_c_id and bank_card.b_type='credit card'); 
+
+--> Perform a query by using the view. 
+select * from finance.v_client; 
+
+--> Change the view name.
+ALTER VIEW finance.v_client RENAME TO v_client_new; 
+
+---> Delete the view. 
+--> Delete the v_client view. Deleting the view does not affect the base table.
+DROP VIEW finance.v_client_new; 
+
+---> Index
+--> Create an index in the property table. 
+CREATE INDEX finance.idx_property ON finance.property(pro_c_id DESC,pro_income,pro_purchase_time); 
+
+--> Run the meta-command to view the created index.
+\di idx_property
+
+---> Rename the index. 
+-->Rebuild the index in the property table and rename the index. Rebuild the index.
+DROP INDEX finance.idx_property; 
+CREATE INDEX finance.idx_property ON finance.property(pro_c_id DESC,pro_income,pro_purchase_time); 
+
+--> Rename the index. 
+ALTER INDEX finance.idx_property RENAME TO idx_property_temp; 
+
+--> Run the meta-command to view the created index.
+\di idx_property_temp 
+
+---> Delete the index. 
+--> Delete the idx_property_temp index. 
+DROP INDEX finance.idx_property_temp; 
+
+---> Updating and Deleting Data
+--> View the table data. 
+SELECT * FROM finance.bank_card where b_c_id<10 ORDER BY b_c_id; 
+
+--> Update the data. 
+UPDATE finance.bank_card SET bank_card.b_type='debit card' from finance.client where bank_card.b_c_id = 
+client.c_id and bank_card.b_c_id<10;
+
+--> Query the data again. 
+SELECT * FROM finance.bank_card ORDER BY b_c_id; 
+
+--> Query the result before deletion. 
+SELECT * FROM finance.fund; 
+
+--> Delete the data. 
+DELETE FROM finance.fund WHERE f_id<3; 
+
+--> Query the deletion result. 
+SELECT * FROM finance.fund; 
+
+--> Deleting a Schema and a Database 
+--> n the \dn command to view the schema in the database.
+\dn 
+
+--> Run the \dt command to view the objects in the finance database. 
+\dt  
+
+--> Run the DROP SCHEMA command to delete the finance database. An error is reported because objects exist in the finance database.
+DROP SCHEMA finance; 
+
+--> Run the DROP SCHEMA....CASCADE command to delete the finance database, which will also delete the objects in the finance database.
+DROP SCHEMA finance CASCADE; 
+
+// lec 6 \\
+
+--> Vi/Vim 
+vim clusterconfig.xml 
+
+--> cd
+If no argument is specified, the current directory is switched. 
+The value . indicates the current directory. 
+The value .. indicates the upper-level directory. 
+The value ~ indicates the home directory. 
+The value / indicates the root directory. 
+
+--> mv
+mv python python.bak
+mv  /physical/backup/*  /data/dbn1 
+
+--> cURL
+-A/--user-agent <string>: Sets the user agent to be sent to the server. 
+-C/--continue-at <offset>: Resumes transmission when a disconnection occurs. 
+-D/--dump-header <file>: Writes the header information to the file. 
+-e/--referer: Specifies the source website. 
+-o/--output: Writes the output to the file. 
+-O/--remote-name: Writes the output to the file and retains the name of the remote file. 
+-s/--silent: Specifies the silent mode. No information is output. 
+-T/--upload-file <file>: Uploads the file. 
+-u/--user <user[:password]>: Sets the username and password of the server. 
+-x/--proxy <host[:port]>: Specifies that the HTTP proxy is used on the specified port. 
+-#/--progress-bar: Displays the current transmission status. 
+Argument description: 
+URL: Specifies the file transfer URL. 
+
+--> Yum
+yum check-update 
+yum update 
+yum list 
+yum install -y libaio-devel flex bison ncurses-devel glibc.devel patch lsb_release wget python3 
+
+--> ln
+ln -s python3 /usr/bin/python 
+ln python3 /usr/bin/python 
+
+--> mkdir
+mkdir test 
+mkdir -p /opt/software/openGauss 
+mkdir –m 777 test 
+
+--> chmod
+chmod ugo+r cluterconfig.xml  
+Or 
+chmod a+r  cluterconfig.xml 
+chmod -R a+rw *
+chmod 777 cluterconfig.xml 
+chmod  R 755 /opt/software/openGauss 
+
+--> chown
+chown omm:dbgrp /opt/software/openGauss/clusterconfig.xml 
+chown -R omm:dbgrp * 
+
+--> ls
+ -l: Displays the detailed information about files, including the creators, creation time, as well as 
+read and write permissions in long format.
+
+-a: Lists all files in a file, including hidden files whose names start with a dot (.) or two dots (..). 
+(The names of hidden files in Linux start with a dot. A file whose name starts with two dots is a 
+parent directory.)   
+
+-d: Lists only the directory instead of files in the directory. It is usually used together with -l. 
+-R: Lists all subdirectories at the same time. It works similar to -l. The only difference is that it 
+does not display the file owners, which is similar to recursion in programming. 
+
+-t: Sorts files by time. 
+-s: Displays the file size after each file. 
+-S: Sorts files by file size.
+
+--> cp
+-> Command for copying the abc file from the home directory to the opt directory: 
+cp /home/abc /opt 
+
+--> rm
+rm qwe 
+rm-rf clusterconfig.log 
+
+--> cat
+cat textfile 
+
+--> Command for adding the content of the textfile1 and textfile2 files to the textfile3 file after 
+adding line numbers to the textfile1 and textfile2 files.
+cat -b textfile1 textfile2 >> textfile3 
+
+--> Command for adding content to the /etc/profile file (you can enter EOF to end the addition):
+cat >>/etc/profile<<EOF 
+>export LD_LIBRARY_PATH=$packagePath/script/gspylib/clib:$LD_LIBRARY_PATH 
+>EOF
+
+\\ lec 7 //
+
+--> Viewing Database Objects
+-->View help information. 
+\?
+
+--> Switch the database.
+\c dbname 
+
+--> List the databases
+\l
+
+--> Run the following command to query the database list in the pg_database system catalog: 
+ SELECT datname FROM pg_database;
+
+--> List tables. 
+\dt 
+
+--> List all tables, views, and indexes. 
+ \d+ 
+
+--> Run the \d+ command of the gsql tool to query table attributes. 
+\d+ tablename
+
+--> View the table structure
+\d tablename  
+
+--> List schemas.
+\dn 
+
+--> View indexes. 
+\di 
+
+--> Query tablespaces.
+\db 
+
+--> Check the pg_tablespace system catalog. Run the following command to view all the tablespaces 
+defined by the system and users: 
+SELECT spcname FROM pg_tablespace; 
+
+--> Query the database user list. 
+SELECT * FROM pg_user;
+
+--> Query user attributes. 
+SELECT * FROM pg_authid
+
+--> Query all roles. 
+ SELECT * FROM PG_ROLES;
+
+--> Query all SQL statements supported by openGauss.
+\h
+
+--> Switch the database.
+\c dbname 
+
+--> Switch the user. 
+\c – username
+
+--> Exit the database.
+\q
