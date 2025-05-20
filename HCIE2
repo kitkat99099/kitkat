@@ -1,4 +1,4 @@
-/**/CH5/**/
+// CH 5 \\
 
 --->DB Optimization
 -> Checking the Server Hardware
@@ -256,7 +256,7 @@ openGauss=# insert into t2 values(generate_series(20000, 30000), generate_series
 openGauss=# Explain analyze select c1 from t1 union select c1 from t2;           ///Print the SQL execution
 openGauss=# Explain analyze select c1 from t1 union all select c1 from t2;
 
-/**/CH6/**/
+// CH 6 \\
 
 ---> Backup and Restoration 
 -> export data from posgres
@@ -367,7 +367,8 @@ openGauss=# show archive_command;
 [omm@opengauss01 ogarchive]$ cp * /opt/huawei/install/data/dn/pg_xlog/
 [omm@opengauss01 ogarchive]$ gs_om -t start
 
-/*/CH7/*/
+// CH 7 \\
+
 --->Advanced Features 
 ->Installing DBMind
 [root@opengauss01 software]# chown omm:dbgrp -R /opt/software/
@@ -380,7 +381,8 @@ openGauss=# show archive_command;
 [omm@opengauss01 openGauss]$ gs_guc reload -D /opt/huawei/install/data/dn -c 'password_encryption_type=2'
 [omm@opengauss01 openGauss]$ gsql -p 26000 -d postgres -c 'create database metadatabase owner dbmind_monitor;
 
-/*/CH8/*/
+// CH 8 \\
+
 --->An Error Is Reported or Threads Cannot Be Created in High Concurrency Scenarios
 
 ->Download the sysbench pressure test tool.
