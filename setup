@@ -65,6 +65,9 @@ sysctl -w vm.dirty_ratio=60 &> /dev/null
 sysctl -w kernel.sched_autogroup_enabled=0 &> /dev/null
 
 [root@ecs-f239 openGauss]# vi /etc/profile
+#add this exports
+export packagePath=/opt/software/openGauss
+export LD_LIBRARY_PATH=$packagePath/script/gspylib/clib:$LD_LIBRARY_PATH
 
 [root@ecs-f239 openGauss]# source /etc/profile 
 
