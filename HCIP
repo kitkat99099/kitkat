@@ -1,0 +1,779 @@
+/*
+---> create user db schema
+create user if not exists user_test password 'Test@123';
+create database if not exists db_test;
+create schema if not exists sche_test;
+CREATE TABLE if not exists tb_test(a int);
+
+---> View all tables in the public schema in the PG_TABLES system catalog
+SELECT distinct(tablename) FROM pg_tables WHERE SCHEMANAME = 'public';
+
+---> Set track_activities to on. The database system collects the running information
+SET track_activities = on;
+
+---> View the running query statements.
+SELECT datname, usename, state,pid FROM pg_stat_activity;
+
+---> View non-idle query statements
+SELECT datname, usename, state FROM pg_stat_activity WHERE state != 'idle';
+
+---> Terminate the session using its thread ID
+SELECT PG_TERMINATE_BACKEND(281451069413744);
+
+---> Check the maximum number of database connections.
+show max_connections;
+-> Change the maximum number of connections to 1000 as user user_test.
+[omm]$ gsql -d postgres -p 26000 -U user_test -W 'Test@123' -r
+ alter system set max_connections= 1000;  //permision error
+GRANT ALL PRIVILEGES TO user_test;
+\q
+[omm]$ gsql -d postgres -p 26000 -U user_test -W 'Test@123' -r
+enja alter karawa
+gs_om -t restart
+
+---> Query tables and objects that columns or tables,indexes and primary keys.
+select * from pg_class;
+-> Query database information.
+select * from pg_database;
+-> Query table information.
+select * from pg_tables where tablename = 'tb_test';
+-> Query table column information.
+select * from information_schema.columns where table_name = 'tb_test';
+-> Query check, primary key, unique, foreign key, and exclusion constraints.
+select * from pg_constraint;
+-> Query table inheritance relationships.
+select * from pg_inherits;
+-> Query the namespace, that is, schema.
+select * from pg_namespace;
+-> Query database role information.
+select * from pg_roles;
+-> Query user access permission.
+select * from pg_shadow;
+-> Query user information.
+select * from pg_user;
+-> Query View Information.
+select * from pg_views;
+
+---> Check whether resource load management is enabled
+show use_workload_manager;
+-> Check which users have the system administrator permission.
+SELECT rolname FROM pg_roles WHERE rolsystemadmin = 't';
+-> Check which users have the login permission.
+SELECT rolname FROM pg_roles WHERE rolcanlogin = 't';
+->  Enable resource load management.
+[omm@]gs_guc set -N all -I all -c "use_workload_manager=on"
+[omm@]$ gs_om -t restart
+-> Check that resource load management is enabled
+openGauss=# show use_workload_manager;
+-> View load management information about jobs being executed by the current user
+select * from dbe_perf.STATEMENT_COMPLEX_RUNTIME;
+-> View operators of the jobs that are being executed by the current user
+select * from dbe_perf.OPERATOR_RUNTIME;
+-> View historical load records
+resource_track_duration = 1min;
+resource_track_cost = 0;
+resource_track_level = 'query';
+-> View archived load management records.
+select * from DBE_PERF.STATEMENT_COMPLEX_HISTORY;
+-> View archived load management records.
+select * from DBE_PERF.STATEMENT_COMPLEX_HISTORY_TABLE;
+
+---> Revoke user user_test's sysadmin and LOGIN permission, and grant it with the
+---> usage permission on the sche_test schema and all permissions on the tb_test table.
+REVOKE ALL PRIVILEGES FROM user_test;
+ALTER USER user_test NOLOGIN;
+GRANT USAGE ON SCHEMA sche_test TO user_test;
+GRANT ALL PRIVILEGES ON tb_test TO user_test;
+-> Grant the query permission on the c_customer_sk...,
+-> and the update permission onc_last_name column in tb_test table to user user_test.
+GRANT select (c_customer_sk,c_customer_id,c_first_name),update (c_last_name) ON
+tb_test TO user_test;
+-> To allow user user_test to grant these permissions to other users,
+GRANT select (c_customer_sk,c_customer_id,c_first_name),update (c_last_name) ON
+tb_test TO user_test WITH GRANT OPTION;
+-> Connect to the db_test database as user user_test and grant permissions to the user.
+gsql -d db_test -p 26000 -U user_test -W 'Test@123';  //if have error
+openGauss=# GRANT create,connect on database db_test TO user_test WITH GRANT OPTION;
+-> Create the test_manager role.
+CREATE ROLE test_manager PASSWORD 'openGauss123';
+GRANT connect on database db_test TO test_manager;
+GRANT USAGE,CREATE ON SCHEMA sche_test TO test_manager;
+-> Create the tpcds_tbspc tablespace and grant all permissions on the tablespace to user user_test.
+CREATE TABLESPACE tpcds_tbspc RELATIVE LOCATION 'tablespace/tablespace_1';
+GRANT ALL ON TABLESPACE tpcds_tbspc TO user_test;
+-> Grant the SELECT ANY TABLE permission on the schema_2 schema to user user_test.
+crate schema shema2,akay create table akai la schimaka
+create table schema_2.tb_test2(a int,b int);
+
+---> Scheduled Jobs // Create a B-compatible database (that is, sql_compatibility = 'B') my_database01.
+CREATE DATABASE my_database01 DBCOMPATIBILITY 'B';
+my_database01=# show sql_compatibility ;
+-> Create scheduled job event01 that is executed once.
+CREATE EVENT IF NOT EXISTS event01 ON SCHEDULE AT current_timestamp + interval
+10 second + interval 3 minute DISABLE DO insert into event_table01 values(0,current_timestamp(3));
+->Query job event1
+my_database01=# show events;
+-> Modify the job to make it available
+alter event event01 enable;
+
+---> Cyclic Scheduled Jobs Create a scheduled job that is executed every minute.
+CREATE EVENT IF NOT EXISTS event02 ON SCHEDULE EVERY 1 minute DO insert into event_table01 values(1,current_timestamp(3));
+-> Check the job execution status.
+select * from event_table01;
+-> Change the job name to event03
+alter event event02 rename to event03;
+-> View the job in the PG_JOB system catalog.
+select * from PG_JOB where job_name = 'event03';
+-> delete event
+drop event event03;
+
+
+--->  PKG_SERVICE // Create sequence seq01.
+create sequence seq01 start with 1 increment 1 nomaxvalue;
+->Create stored procedure job_test01.
+create or replace procedure job_test01
+as
+begin
+insert into event_table02 values(seq01.nextval);
+end;
+/
+-> Query the stored procedure.Check the OID of the stored procedure in the pg_proc 
+select oid from pg_proc where proname = 'job_test01';
+-> Create a scheduled job.
+select pkg_service.job_submit(1,'select job_test01()',sysdate,'sysdate+1/(24*60)');
+->Check the pg_job system
+select * from pg_job;
+-> Check whether the scheduled job is successful.
+select * from event_table02;
+-> Invalidate the scheduled job
+select pkg_service.job_finish(1,true);
+-> Check the job status
+select * from pg_job where job_id = '1';
+-> Schedule the scheduled job to run once a day
+select pkg_service.job_update(1,sysdate,'sysdate+1',null);
+-> Delete the scheduled job.
+select pkg_service.job_cancel(1);
+
+/**/ch2/**/
+
+---> Checking the Database Cluster Status
+gs_om -t status --detail 
+
+---> Generating Static Configuration Files
+gs_om -t generateconf -X /opt/software/openGauss/cluster_config.xml --distribute
+
+---> Checking the Database Status 
+->Perform a single-item check // check item
+gs_check -i CheckCPU
+-> Perform a local check. //check is executed locally.
+gs_check -i CheckCPU -L
+-> Perform a scenario-specific check.
+gs_check -e inspect 
+
+--->Check the OS
+[root@]# gs_checkos -i A -X /opt/software/openGauss/cluster_config.xml --detail -o /var/log/checkos
+-> View the output
+[root@Run861 log]#cd /var/log
+[root@Run861 log]# more checkos 
+
+---> Database Parameters
+-> Check the value of max_connections
+gs_guc check -D /opt/huawei/install/data/dn -c "max_connections"
+-> change to 800
+gs_guc reload -N all -I all -c "max_connections=800"
+show max_connections;  //dway ama gs-om -t restart ka pshani aya
+
+--->  Lock Waits
+-> create tb and insert data
+-> Start a transaction and lock the graderecord table.
+START TRANSACTION;
+LOCK TABLE graderecord IN ACCESS EXCLUSIVE MODE;
+-> modify a record in the graderecord table.
+update graderecord set name='James' where number='210102';
+->query lock waits.
+select usename,granted,locktag,query_start,query,l.pid from pg_locks l,pg_stat_activity a
+where l.pid=a.pid and locktag in(select locktag from pg_locks where granted='f');
+
+--->WDR
+[omm@]$ gs_guc set -N all -I all -c " enable_wdr_snapshot=on"
+gs_om -t restart
+openGauss=# select name ,setting from pg_settings where name like '%wdr%';
+->View WDR snapshot information.
+select * from snapshot.snapshot;
+->Query the value of pgxc_node_name
+show pgxc_node_name;
+->Run the \a \t \o Server file path command to generate WDR //amay xwarawa shar7a
+\a: changes to the unaligned mode.
+\t: changes the information
+\o: sends all the query results to a server
+\a \t \o /home/omm/wdrTest.html  //ama walama
+->View the generated WDR.
+[omm@]$ pwd
+/home/omm
+[omm@]$ ls -l
+
+/**/ch3/**/
+
+---> Database Constraints
+->Use the UNIQUE constraint to ensure that the values
+CREATE TABLE t_unique(
+id INT UNIQUE,
+c1,
+c2
+);
+ALTER TABLE t_unique ADD CONSTRAINT uk_t_unique UNIQUE (c1, c2);
+\d+ t_unique;
+
+->Use the PRIMARY KEY constraint.
+CREATE TABLE t_prkey(
+id INT NOT NULL PRIMARY KEY,
+ALTER TABLE t_prkey ADD CONSTRAINT pk3 PRIMARY KEY (c1);
+->Use the FOREIGN KEY constraint.
+ALTER TABLE emp ADD CONSTRAINT fk_emp_dept FOREIGN KEY (department_id) REFERENCES dept(department_id);
+\d+ emp
+
+--->Procedure
+openGauss=# SELECT
+e.first_name,
+e.last_name,
+e.salary,
+d.department_id,
+d.department_name
+FROM employees e join departments d
+On e.department_id = d.department_id; 
+->Query the names, salaries all departments.
+select
+e.last_name,
+e.sala,
+FROM departments d LEFT JOIN employees e
+ON e.department_id = d.department_id; 
+
+---> UNION Clause // dw tb drwskaw insert data bka enja am codea
+SELECT * FROM t_demo
+UNION             // or write " UNION ALL "
+SELECT * FROM t_demo_copy;
+
+--->WHERE Clause
+select * from employees where hire_date between '2005-06-24' and '2007-12-31' and salary < 5000;
+select * from employees where (department_id in(30,60) or salary > 4000) and first_name not like 'D%' ;
+
+--->Grouping and Sorting
+SELECT
+AVG(salary),MAX(salary),MIN(salary),SUM(salary)
+FROM employees;
+
+SELECT department_id,AVG(salary),COUNT(*),
+MAX(salary),MIN(salary),SUM(salary)
+FROM employees
+GROUP BY department_id
+order by max desc;
+
+//Having avg < 7000  //agar am marja habw pesh order binusa
+order by max desc;
+
+
+--->SubQuery Derived Table
+Select partment_name, ds.sum_salary
+ FROM departments d
+ JOIN (SELECT department_id, ROUND(AVG(salary), 2) AS sum_salary
+ FROM employees
+ group by department_id ) ds ON (d.department_id = ds.department_id);
+
+->IN Operator
+SELECT d.department_id,
+d.department_name
+FROM departments d
+WHERE d.department_id in (SELECT department_id FROM employees WHERE
+salary > 5000);
+
+->ALL Operator
+SELECT first_name, last_name, salary
+FROM employees
+WHERE salary > ALL(SELECT salary
+FROM employees
+WHERE department_id =30);
+
+->ANY Operator
+SELECT first_name, last_name, salary
+FROM employees
+WHERE salary > ANY(SELECT salary
+FROM employees
+WHERE department_id =30);
+
+->EXISTS Operator
+SELECT d.department_id,
+d.department_name
+FROM departments d
+WHERE exists (SELECT * FROM employees WHERE department_id = d.department_id
+and salary > 5000);
+
+->Correlated Subquery
+ SELECT first_name, last_name, salary
+FROM employees o
+WHERE o.salary >(SELECT avg(salary)
+FROM employees i
+WHERE i.department_id = o.department_id);
+
+SELECT department_id,
+d.department_name,
+(SELECT SUM(salary)
+FROM employees e
+WHERE e.department_id = d.department_id) AS sum_salary
+FROM departments d;
+
+->Subquery in INSERT and UPDATE
+insert into employees_new      //data old tb akata new tb
+select *
+from employees e
+where e.employee_id in(select e.employee_id
+ from employees
+ where e.salary > 5000);
+
+--->Functions
+select abs(-15.9);
+select ceil(15.3);
+select floor(15.3);
+select power(5,3);
+SELECT div(11,3), mod(11,3);
+SELECT random();
+
+->Character Processing 
+select concat('123','xyz','456');
+select concat_ws('-','123','xyz','456');
+select replace('12345623','23','xyz');
+SELECT INSTR('123456abcd123456abcd', '45'), INSTR('123456abcd123456abcd', 'bcd', 1,2 );
+SELECT lower('JAMES'), upper('James');
+select substr('abcdefg',3,4);
+
+->Time/Date
+SELECT age(timestamp '2023-09-30', timestamp '2023-09-05');
+select current_timestamp,current_date;
+
+->Type Conversion
+SELECT CAST ('201' AS INTEGER), '2023-09-15'::DATE;
+select to_date('2023/09/15','YYYY/MM/DD');
+SELECT to_char(current_timestamp, 'HH24:MI:SS');
+
+-> System Information Functions
+select pg_postmaster_start_time(),current_catalog,current_database(),get_hostname();
+select current_schema;
+select user,current_user,current_role,session_user,pg_current_userid();
+
+--->Stored Procedures and Triggers
+CREATE OR REPLACE PROCEDURE p1 IS
+BEGIN
+INSERT INTO t1 VALUES (1,'Li Ming');
+COMMIT;
+END;
+/
+call p1();
+select * from t1;
+DROP PROCEDURE p1; 
+
+--->Stored Procedure with Parameters
+CREATE OR REPLACE PROCEDURE p2 ( param1 IN INTEGER, param2 IN OUT
+INTEGER )
+AS
+BEGIN
+param2:= param1 * param2;
+RAISE INFO 'param2 is: %', param2;
+END;
+/
+call p2(6,7);
+
+---> Anonymous Blocks
+ DO $$
+DECLARE
+name text;
+BEGIN
+name := 'PL/SQL';
+RAISE NOTICE 'Hello %!', name;
+END $$;
+
+--->Nested Subblocks
+DO $$
+DECLARE
+name text;
+BEGIN
+name := 'outer_block';
+RAISE NOTICE 'This is %', name;
+DECLARE
+name text := 'sub_block';
+BEGIN
+RAISE NOTICE 'This is %', name;
+RAISE NOTICE 'The name FROM the outer block is %',name;
+END;
+RAISE NOTICE 'This is %', name;
+END $$;
+
+--->Conditional Statements
+ DO $$
+DECLARE
+ i integer := 4;
+ j integer := 5;
+BEGIN
+ IF i > j THEN
+ RAISE NOTICE 'i is greater than j';
+ ELSIF i < j THEN
+ RAISE NOTICE 'i is less than j';
+ ELSE
+ RAISE NOTICE 'i is equal to j';
+ END IF;
+END $$;
+/
+
+--->Loop Statements
+DO $$
+DECLARE
+ i integer := 0;
+BEGIN LOOP
+ EXIT WHEN i = 8;
+ i := i + 1;
+ RAISE NOTICE 'Loop: %', i;
+ END LOOP;
+END $$;
+
+ DO $$
+DECLARE
+ i integer := 0;
+BEGIN LOOP
+ EXIT WHEN i = 8;
+ i := i + 1;
+ CONTINUE WHEN mod(i, 2) = 1;
+ RAISE NOTICE 'Loop: %', i;
+ END LOOP;
+END $$;
+
+--->FOR Statement
+DO $$
+BEGIN
+ FOR i IN 1..6 LOOP
+ RAISE NOTICE 'Output: %', i;
+ END LOOP;
+END $$;
+
+ DO $$
+DECLARE
+e record;
+BEGIN
+FOR e IN (SELECT * FROM employees LIMIT 5) LOOP
+RAISE NOTICE 'Loop: %,%', e.first_name, e.last_name;
+END LOOP;
+END $$;
+
+--->Error Trapping Statement
+CREATE OR REPLACE PROCEDURE proc_exp()
+AS
+DECLARE
+ x INT :=0;
+ y INT;
+BEGIN
+ UPDATE employees SET first_name = 'James' WHERE first_name = 'John';
+ x := x + 1;
+ y := x / 0;
+EXCEPTION
+ WHEN division_by_zero THEN
+ RAISE NOTICE 'caught division_by_zero';
+ RAISE NOTICE 'x: %',x;
+ RETURN ;
+END;
+/
+call proc_exp();
+
+/**/ch4/**/
+skip
+
+/**/ch5/**/
+
+--->SSL Connection Configuration
+-> Setting Up the CA Environment
+[root@]# mkdir /root/test
+[root@]# cd /etc/pki/tls
+[root@]# cp openssl.cnf ~/test
+[root@]# cd ~/test
+[root@test]# mkdir ./demoCA ./demoCA/newcerts ./demoCA/private
+[root@test]# chmod 777 ./demoCA/private
+
+
+[root@test]# echo '01'>./demoCA/serial
+[root@test]# touch ./demoCA/index.txt
+[root@test]# vi ~/test/openssl.cnf
+[root@test]# vi /etc/profile  /**/lanaw am file ama bnusa
+export LD_LIBRARY_PATH=/usr/lib64
+[root@test]# source /etc/profile
+
+---> Creating a CA-Signed Certificate
+[root@test]# openssl genrsa -aes256 -out demoCA/private/cakey.pem 2048
+[root@test]# openssl req -config openssl.cnf -new -key demoCA/private/cakey.pem -out demoCA/careq.pem
+[root@test]# vi openssl.cnf 
+
+--->SSL Connection Configuration (Creating a Server)
+[root@test]# openssl genrsa -aes256 -out server.key 2048   /*/Generate the server private key file
+[root@test]# openssl req -config openssl.cnf -new -key server.key -out server.req  /*/Generate the server certificate request
+[root@test]# vi openssl.cnf                         /*/Generate the server certificate
+[root@test]# vi demoCA/index.txt.attr
+[root@test]# openssl ca -config openssl.cnf -in server.req -out server.crt -days 3650 -md sha256
+[root@test]# openssl rsa -in server.key -out server.key  /*/Remove password protection
+
+--->SSL Connection Configuration (Creating a Client)
+[root@test]# openssl genrsa -aes256 -out client.key 2048
+[root@test]# openssl req -config openssl.cnf -new -key client.key -out client.req
+[root@test]# openssl genrsa -aes256 -out client.key 2048
+[root@test]# openssl req -config openssl.cnf -new -key client.key -out client.req
+[root@test]# openssl ca -config openssl.cnf -in client.req -out client.crt -days 3650 -md sha256
+[root@ecs-5a5b test]# openssl rsa -in client.key -out client.key
+
+--->SSL Connection(Configuring the Client)
+[root@db1 ~]# cp -r ~/test/* /opt/software/openGauss/libcgroup/share/sslcert/om  /*/Copy the certificate to the sslcert client mdify permision
+[root@]# chmod 0600 /opt/software/openGauss/libcgroup/share/sslcert/om/client.crt
+[root@]# chmod 0600 /opt/software/openGauss/libcgroup/share/sslcert/om/client.key
+[root@]# chmod 0600 /opt/software/openGauss/libcgroup/share/sslcert/om/demoCA/ca*
+[omm@]$ cd /opt/software/openGauss/libcgroup/share/sslcert/om
+[root@]# cp demoCA/cacert.pem .
+[root@]# chown omm:dbgrp -R /opt/software/openGauss/libcgroup/share/sslcert/om
+[root@]$ ll
+
+[root@db1 om]# cp server.* /opt/huawei/install/data/dn         /*/ Copy the CA certificate and server
+[root@db1 om]# cp ca* /opt/huawei/install/data/dn
+[root@db1 om]# chown omm:dbgrp -R /opt/huawei/install/data/dn/server.*
+[root@db1 om]# chown omm:dbgrp -R /opt/huawei/install/data/dn/ca*
+[root@db1 om]# chmod 0600 /opt/huawei/install/data/dn/server.*
+[root@db1 om]# chmod 0600 /opt/huawei/install/data/dn/ca*
+
+[root@ecs-98c8 om]# chown -R omm:dbgrp /opt
+[root@ecs-98c8 om]# su - omm
+[omm@client ~]$ mkdir ~/.ssl
+[omm@ecs-5a5b ~]$ cd /opt/software/openGauss/libcgroup/share/sslcert/om
+[omm@client ~]$ mv client.* cacert.pem ~/.ssl/ ## Copy the client and CA certificates to the client directory.
+[omm@client ~]$ vi ~/.bash_profile
+[omm@client ~]$ source ~/.bash_profile
+[omm@ecs-98c8 ~]$ vi /opt/huawei/install/data/dn/pg_hba.conf 
+
+---> User Permission
+1)create user
+GRANT ALL PRIVILEGES TO joe;
+->Granting Object Permissions to Users or Roles
+1)create schema
+2)create table
+openGauss=# REVOKE ALL PRIVILEGES FROM joe;
+openGauss=# GRANT USAGE ON SCHEMA test TO joe;
+openGauss=# GRANT ALL PRIVILEGES ON customer TO joe;
+
+GRANT select (c_customer_sk,c_customer_id,c_first_name),update (c_last_name) ON customer TO joe;
+GRANT select (c_customer_sk,c_customer_id,c_first_name) ON customer TO joe WITH GRANT OPTION;
+GRANT create,connect on database postgres TO joe WITH GRANT OPTION;
+
+openGauss=# CREATE ROLE test_manager PASSWORD 'openGauss@123456';
+openGauss=# GRANT USAGE,CREATE ON SCHEMA test TO test_manager;
+
+openGauss=# CREATE TABLESPACE tpcds_tbspc RELATIVE LOCATION 'tablespace/tablespace_1';
+openGauss=# GRANT ALL ON TABLESPACE tpcds_tbspc TO joe;
+
+->Granting the Permissions of One User or Role to Others
+openGauss=# CREATE ROLE manager PASSWORD 'Test321##';
+openGauss=# GRANT joe TO manager WITH ADMIN OPTION;
+openGauss=# CREATE ROLE senior_manager PASSWORD 'Test321##';
+openGauss=# GRANT manager TO senior_manager;
+
+->Row-level Security
+create user, create tb, insert data
+openGauss=# GRANT SELECT ON all_data TO alice, bob, peter;
+openGauss=# ALTER TABLE all_data ENABLE ROW LEVEL SECURITY;
+openGauss=# CREATE ROW LEVEL SECURITY POLICY all_data_rls ON all_data USING(role = CURRENT_USER);
+openGauss=# \d+ all_data   /*/tb detail
+openGauss=# \c postgres alice ###Switch to user alice.
+openGauss=> SELECT * FROM public.all_data;
+openGauss=> \c postgres bob ###Switch to user bob
+openGauss=> SELECT * FROM public.all_data;
+
+--->DB Security Audit
+[omm@Run861 dn]$ gs_guc set -N all -I all -c "audit_enabled=on"
+[omm@Run861 dn]$ gs_guc reload -N all -I all -c "audit_system_object=12295"
+openGauss=# select name,setting,short_desc from pg_settings where name like '%audit%';
+openGauss=# SELECT time,type,result,username,database,object_name,detail_info FROM pg_query_audit('2023-09-30 09:00:00','2023-09-30 10:00:00');
+openGauss=# SELECT pg_delete_audit('2023-10-30 01:00:00','2023-10-30 02:00:00');       //del aduit
+
+--->Unified DB Audit
+[omm@Run861 ~]$ gs_guc reload -I all -N all -c "enable_security_policy=1"
+openGauss=# CREATE TABLE t6 (ID bigint NOT NULL, Name varchar (255) NOT NULL,);   //resource tb
+openGauss=# grant select,update,delete on t6 to alice;
+openGauss=# CREATE RESOURCE LABEL adt_lb0 add TABLE(t6);
+openGauss=# CREATE AUDIT POLICY adt1 PRIVILEGES ALTER ON LABEL(adt_lb0) FILTER ON ROLES(alice);
+openGauss=# CREATE AUDIT POLICY adt2 ACCESS SELECT ON LABEL(adt_lb0),INSERT ON
+LABEL(adt_lb0), DELETE ON LABEL(adt_lb0) FILTER ON ROLES(alice),APP(gsql);
+
+--->Encrypted Equality Query
+[omm@ecs-b168 ~]$ mkdir -p $GAUSSHOME/etc/localkms/    /*/Create the $GAUSSHOME
+[omm@ecs-b168 ~]$ gsql -d postgres -p 26000 -r -C
+openGauss=# CREATE CLIENT MASTER KEY ImgCMK01 WITH (KEY_STORE = localkms, KEY_PATH = "key_path_value1", ALGORITHM = RSA_2048);
+openGauss=# CREATE COLUMN ENCRYPTION KEY ImgCEK01 WITH VALUES (CLIENT_MASTER_KEY = ImgCMK01, ALGORITHM = AEAD_AES_256_CBC_HMAC_SHA256);
+openGauss=# \d creditcard_info01
+openGauss=# INSERT INTO creditcard_info01 VALUES ();
+openGauss=# select * from creditcard_info01 where name = 'joe';
+openGauss=# select * from creditcard_info01 order by id_number;
+openGauss=# select * from creditcard_info01 where id_number like'4%';
+openGauss=# select a.name,b. card_bal from creditcard_info01 a inner join creditcard_bal01 b on a.credit_card = b. credit_card and a.name = 'joy';
+openGauss=# select sum(b. card_bal) from creditcard_info01 a inner join creditcard_bal01 b on a.credit_card = b. credit_card and a.name in ('joy', 'joe');
+
+openGauss=# CREATE TABLE creditcard_info02 (id_number int, name text encrypted with     /*/randomize encrypted 
+(column_encryption_key = ImgCEK02, encryption_type = RANDOMIZED),credit_card varchar(19)
+encrypted with (column_encryption_key = ImgCEK01, encryption_type = RANDOMIZED));
+
+---> Ledger Database
+openGauss=# CREATE SCHEMA ledgernsp WITH BLOCKCHAIN;
+openGauss=# CREATE TABLE ledgernsp.usertable(id int, name text);
+openGauss=# \d+ ledgernsp.usertable;
+openGauss=# \d+ blockchain.ledgernsp_usertable_hist;
+openGauss=# INSERT INTO ledgernsp.usertable VALUES(1, 'alex'), (2, 'bob'), (3, 'peter');
+openGauss=# UPDATE ledgernsp.usertable SET name = 'bob2' WHERE id = 2;
+
+->Viewing the Operation History of a Ledger Database
+openGauss=# SELECT * FROM gs_global_chain;
+openGauss=# SELECT * FROM blockchain.ledgernsp_usertable_hist;
+openGauss=# SELECT *, hash FROM ledgernsp.usertable;
+
+->Checking Data Consistency
+openGauss=# SELECT pg_catalog.ledger_hist_check('ledgernsp', 'usertable');
+openGauss=# SELECT pg_catalog.ledger_gchain_check('ledgernsp', 'usertable');
+
+->Archiving and Repairing 
+openGauss=# SELECT pg_catalog.ledger_hist_archive('ledgernsp', 'usertable');
+openGauss=# SELECT * FROM blockchain.ledgernsp_usertable_hist;
+openGauss=# SELECT pg_catalog.ledger_gchain_archive();
+openGauss=# SELECT * FROM gs_global_chain;
+openGauss=# SELECT pg_catalog.ledger_hist_repair('ledgernsp', 'usertable');
+openGauss=# SELECT pg_catalog.ledger_gchain_repair('ledgernsp', 'usertable');
+
+/**/ch6/**/
+--->Procedure
+create db, create user, grant all to user, create tb ,insert data
+
+-> DB Security Management
+create user ,
+finance=> GRANT select ON table bank_card to user1;
+finance=> GRANT select ON table client to user1;
+finance=> GRANT select ON table fund to user1;
+finance=> GRANT select ON table property to user1;
+finance=> select * from property;
+
+->Use row-level security to restrict fund_app to access only fund-related....
+finance=>ALTER TABLE property ENABLE ROW LEVEL SECURITY;
+finance=>CREATE ROW LEVEL SECURITY POLICY property_rls ON property
+USING(current_user !='fund_app' or current_user ='fund_app' and pro_type =3);
+
+---> Advanced SQL Syntax
+finance=>                           /*/Implement complex queries using right join and aggregate functions
+select c_id_card, c_name,sum(pro_income) total_income
+from
+client c,
+bank_card b,
+property p,
+(select p_name name, p_id pro_pif_id, 1 pro_type from finances_product union all
+select i_name name, i_id pro_pif_id, 2 pro_type from insurance union all
+select f_name name, f_id pro_pif_id, 3 pro_type from fund) d
+where
+c.c_id = p.pro_c_id
+and c.c_id = b.b_c_id(+)
+and p.pro_pif_id=d.pro_pif_id
+and p.pro_type=d.pro_type
+group by c_id_card, c_name
+order by 2 desc;
+
+finance=>                   /*/Run the EXPLAIN ANALYZE command to view the execution plan 
+explain analyze select c_id_card, c_name,sum(pro_income) total_income
+from
+client c,
+bank_card b,
+property p,
+(select p_name name, p_id pro_pif_id, 1 pro_type from finances_product union all
+select i_name name, i_id pro_pif_id, 2 pro_type from insurance union all
+select f_name name, f_id pro_pif_id, 3 pro_type from fund) d
+where
+c.c_id = p.pro_c_id
+and c.c_id = b.b_c_id(+)
+and p.pro_pif_id=d.pro_pif_id
+and p.pro_type=d.pro_type
+group by c_id_card, c_name
+order by 2 desc;
+
+---> DB Object Management
+openGauss=# \c finance          /*/Switch to DB
+finance=# \d                    /*/View all tables
+finance=# \d property           /*/View the detailed definition
+finance=# \di                   /*/View all indexes.
+finance=# \d bank_card_pkey     /*/detailed definition of a specific index
+[
+/*/Query the sessions and SQL statements running in the current database
+openGauss=# select a.tid,a.thread_name,a.query_id,a.wait_status,a.wait_event,left(b.query,50)
+from dbe_perf.thread_wait_status a left join dbe_perf.session_stat_activity b
+on a.tid=b.pid and a.query_id =b.q
+]
+
+---> Health Check
+[omm@ecs-840f lab]$ dirname `which gs_check`    /*/Obtain the gs_check directory.
+[
+/*/Replace /opt/huawei/install/om/script in the following command .....
+[omm@ecs-840f lab]$ find /opt/huawei/install/om/script/gspylib/inspection/items/ |grep '.py$' | awk - 
+F/ '{print $(NF-1), substr($NF,1,length($NF)-3)}'
+]
+
+[omm@ecs-840f lab]$ for i in `cat check_db_list`; do gs_check -L -i $i; done      /*/Check all database check items. 
+
+->Perform ANALYZE operation.
+finance=# analyze insurance;
+finance=# analyze bank_card;
+finance=# analyze client;
+finance=# analyze finances_product;
+finance=# analyze property;
+finance=# analyze fund;
+finance=# analyze dbe_pldeveloper.gs_source;
+
+[omm@ecs-840f lab]$ gs_check -L -i CheckUnAnalyzeTable           /*/Run gs_check on CheckUnAnalyzeTable again
+
+--->Performance Check
+[omm@ecs-840f ~]$ gs_checkper
+[omm@ecs-840f lab]$ gs_checkperf -i PMK --detail
+
+--->Log Collection
+[omm@ecs-840f lab]$ gs_collector --begin-time='20231101 07:00' --end-time='20231107 16:10'
+[omm@ecs-840f lab]$ tar zxvf /var/log/omm/omm/collector_20231020_072319.tar.gz    /*/ decompres package
+[omm@ecs-840f lab]$ cd collector_20231020_072319/    /*/decompres directory
+[omm@ecs-840f collector_20231020_072319]$ tar zxvf ecs-840f.tar.gz
+[omm@ecs-840f collector_20231020_072319]$ vi ecs-840f/systemfiles/OS_information_*.txt
+[omm@ecs-840f collector_20231020_072319]$ vi ecs-840f/systemfiles/database_system_info_*.txt
+[omm@ecs-840f collector_20231020_072319]$ vi ecs-840f/catalogfiles/*_pg_*
+[omm@ecs-840f collector_20231020_072319]$ vi ecs-840f/configfiles/config_*/dn_6001/*.conf
+
+--->Parameter Settings
+[omm@ecs-840f lab]$ free -h                              /*/Check the total memory and free memory
+openGauss=# show shared_buffers;                        /*/Check the shared buffer size 
+openGauss=# alter system set shared_buffers='10GB';    /*/Adjust the shared buffer parameter
+[omm@ecs-e1b3 ~]$ gs_om -t stop;                      /*/Stop the database
+[omm@ecs-840f lab]$ gsql -d postgres -p 26000 -r -c 'show shared_buffers'      /*/Check that the parameter has been adjusted successfully
+
+--->Background Maintenance
+finance=# analyze verbose many_clients;       /*/analyz tb akat many_cli name tb'a
+finance=# \dt+ many_clients;                  /*/Check the size 
+finance=# REINDEX INDEX mc_gid;              /*/Use REINDEX to re-create the mc_gid index
+
+--->WDR
+openGauss=# show enable_wdr_snapshot;
+openGauss=# alter system set enable_wdr_snapshot=on;
+openGauss=# select * from snapshot.snapshot;
+openGauss=# select create_wdr_snapshot();
+openGauss=# \a \t \o wdr.html                /*/Use the latest two snapshots to generate
+openGauss=# select generate_wdr_report(1, 2, 'all', 'node', pgxc_node_str()::cstring);
+
+--->Encrypted Query
+/*/Create the KMS directory for creating an encrypted database as user omm.
+[omm@ecs-840f lab]$ mkdir -p $GAUSSHOME/etc/localkms/
+gsql -p 26000 finance -r -C
+/*/create CMK
+finance=# CREATE CLIENT MASTER KEY finCMK WITH (KEY_STORE = localkms, KEY_PATH = "finance", ALGORITHM = RSA_2048);
+/*/Create a CEK
+finance=# CREATE COLUMN ENCRYPTION KEY finCEK WITH VALUES (CLIENT_MASTER_KEY = finCMK, ALGORITHM = AEAD_AES_256_CBC_HMAC_SHA256);
+/*/Add the encrypted column c_name_e to the client table.
+finance=# ALTER TABLE client ADD COLUMN c_name_e VARCHAR(100) ENCRYPTED WITH
+(COLUMN_ENCRYPTION_KEY = finCEK, ENCRYPTION_TYPE = DETERMINISTIC);
+/*/Check whether the value of c_name_e is encrypted
+finance=# select c_name_e from client where c_id=1;
