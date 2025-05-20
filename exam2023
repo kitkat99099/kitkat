@@ -1,0 +1,768 @@
+Task 1: Data Objects (150 Points)
+
+Subtask 1: Create a tablespace.
+
+a. Create the tbs tablespace in /home/omm/tbs.
+
+Screenshots:
+a. Take a screenshot of the command and save the image as 1-1-1 createTBS.
+
+-------------------
+CREATE TABLESPACE tbs 
+  LOCATION '/home/omm/tbs';
+
+-------------------
+
+##########
+Subtask 2: Create a database named schooldb. 
+
+a. Create the schooldb database.
+b. Set the tablespace of the schooldb database to tbs.
+
+Screenshots:
+a.Take a screenshot of the command for creating the schooldb database and save the
+image as 1-2-1 create-db.
+
+b.Take a screenshot of the command for setting the default tablespace to tbs and save the image as 1-2-2 alter-db.
+--------------------
+a. CREATE DATABASE schooldb;
+
+b. ALTER DATABASE schooldb SET TABLESPACE tbs;
+
+--------------------
+
+###########
+Subtask 3: Create a database user, set user permissions, and create a data table. 
+
+a. Create database user test and set the password to openGauss@123.
+b. Grant all permissions of the schooldb database to the user test.
+c. Create the teacher data table. The first column is teacher_id (teacher ID of the integer
+type), the second column is name (teacher name of the character type, max. 20
+characters), and the third column is age (teacher age of the integer type).
+d. Insert the following data into the teacher table.
+
+--------------------
+a. CREATE USER test IDENTIFIED BY 'openGauss@123';
+
+b.\c schooldb
+GRANT ALL PRIVILEGES ON DATABASE schooldb TO test;
+
+c. CREATE TABLE teacher (
+  teacher_id INT,
+  name VARCHAR(20),
+  age INT
+);
+
+d. INSERT INTO teacher (teacher_id, name, age) VALUES (1, 'Alice', 30);
+INSERT INTO teacher (teacher_id, name, age) VALUES (2, 'Bob', 45);
+INSERT INTO teacher (teacher_id, name, age) VALUES (3, 'Charlie', 38);
+
+
+--------------------
+
+############
+Subtask 4: Manage data objects.
+
+a. Check the OID of the teacher table.
+b. Check the OID of the schooldb database.
+c. Query the OIDs of all the tablespaces defined by the system and users.
+d. Query the current size of the tbs tablespace.
+e. Check the OID of the default tablespace of the schooldb database.
+f. Rename tablespace tbs to tbs1.
+
+--------------------
+a. SELECT oid FROM pg_class WHERE relname = 'teacher';
+
+b. SELECT oid FROM pg_database WHERE datname = 'schooldb';
+
+c. SELECT oid, spcname FROM pg_tablespace;
+
+d. SELECT pg_size_pretty(pg_tablespace_size('tbs'));
+
+e. SELECT dattablespace FROM pg_database WHERE datname = 'schooldb';
+##To see the name from OID (optional):
+SELECT oid, spcname FROM pg_tablespace WHERE oid = (
+  SELECT dattablespace FROM pg_database WHERE datname = 'schooldb'
+);
+
+f. ALTER TABLESPACE tbs RENAME TO tbs1;
+--------------------
+
+############
+Subtask 5: Export the entire database in plain-text format.
+
+a.Use gs_dump to export data from the postgres database. The exported file is in plain-text format, the file path is /home/omm/backup, and the file name is
+postgres_all.sql.
+
+b.Create a database named dbsql_restore and use gsql to import the exported
+postgres_all.sql file to the schooldb_restore database. (The schooldb_restore
+database needs to be created in advance.)
+
+
+Screenshots:
+
+a. Take a screenshot of the command for exporting data from the postgres database in
+plain-text format and save the image as 1-5-1gs-dump.
+b. Take a screenshot of the command for importing the schooldb_all.sql file and save
+the image as 1-5-2gs-restore.
+
+--------------------
+a. gs_dump -U omm -f /home/omm/backup/postgres_all.sql -F p postgres
+##Notes: -F p specifies plain-text format
+
+b. CREATE DATABASE schooldb_restore;
+gsql -U omm -d schooldb_restore -f /home/omm/backup/postgres_all.sql
+
+--------------------
+
+#############
+Task 2: SQL Statements. 
+Subtask 1: Create a database.
+
+a.Create a database named test.
+
+Screenshots:
+
+a. Take a screenshot of the command for creating the database and the output, and save the image as 2-1-1create-db.
+
+--------------------
+CREATE DATABASE test;
+
+--------------------
+
+##############
+Subtask 2: Create a schema.
+
+Switch to the test database in gsql.
+
+\c test
+
+a. Create a schema named test_schema.
+
+Screenshots:
+
+a.Take a screenshot of the command and output, and save the image as 2-2-1schema.
+
+--------------------
+\c test
+
+CREATE SCHEMA test_schema;
+
+--------------------
+
+
+##############
+Subtask 3: Create a data table.
+
+Perform the following operations in the test database:
+
+a. Create the student table, including sno (int), sname (a maximum of 20 characters),
+ssex (a maximum of 5 characters), and sage (int).
+
+b. Create the course table, including cno (int) and cname (a maximum of 20 characters).
+c. Create the score table, including sno (int), cno (int), and grade (int).
+
+Screenshots:
+a. Take a screenshot of the command for creating the student table and the output, and save the image as 2-3-1create-student.
+
+b. Take a screenshot of the command for creating the course table and the output, and save the image as 2-3-2create-course.
+
+c. Take a screenshot of the command for creating the score table and the output, and save the image as 2-3-3create-course.
+
+--------------------
+a. CREATE TABLE student (
+  sno INT,
+  sname VARCHAR(20),
+  ssex VARCHAR(5),
+  sage INT
+);
+
+b. CREATE TABLE course (
+  cno INT,
+  cname VARCHAR(20)
+);
+
+c. CREATE TABLE score (
+  sno INT,
+  cno INT,
+  grade INT
+);
+
+--------------------
+
+
+################
+
+Subtask 4: Create a partitioned table.
+
+a. Create a range partitioned table test_range_part. The table has only one column of val integers and is divided into three partitions p1 (val < 50), p2 (50 ≤ val < 100), and p3 (100 ≤ val < MAXVALUE). After the creation is complete, run \d+ to output the structure information of the test_range_part table.
+
+b. Create a list partitioned table test_list_part. The table has only one column of val integers and is divided into three partitions p1 (1, 3), p2 (2, 4), and p3 (DEFAULT). After the creation is complete, run \d+ to output the structure information of the test_list_part table. 
+
+Screenshots:
+
+a. Take a screenshot of the command for creating the range partitioned table and the
+output, and save the image as the 2-4-1partition-range file.
+
+b. Take a screenshot of the command for creating the list partitioned table and the
+output, and save the image as 2-4-2partition-list.
+
+--------------------
+a. CREATE TABLE test_range_part (
+  val INT
+) PARTITION BY RANGE (val);
+
+CREATE TABLE test_range_part_p1 PARTITION OF test_range_part
+  FOR VALUES FROM (MINVALUE) TO (50);
+
+CREATE TABLE test_range_part_p2 PARTITION OF test_range_part
+  FOR VALUES FROM (50) TO (100);
+
+CREATE TABLE test_range_part_p3 PARTITION OF test_range_part
+  FOR VALUES FROM (100) TO (MAXVALUE);
+
+##Run this command to show structure:
+\d+ test_range_part
+
+b. CREATE TABLE test_list_part (
+  val INT
+) PARTITION BY LIST (val);
+
+CREATE TABLE test_list_part_p1 PARTITION OF test_list_part
+  FOR VALUES IN (1, 3);
+
+CREATE TABLE test_list_part_p2 PARTITION OF test_list_part
+  FOR VALUES IN (2, 4);
+
+CREATE TABLE test_list_part_p3 PARTITION OF test_list_part
+  DEFAULT;
+
+##Run this command to show structure:
+\d+ test_list_part
+
+--------------------
+
+
+###############
+Subtask 5: Modify the data table.
+
+a. Add a column named spec of the integer type to the student table. After the
+modification, run \d+ to output the structure details of the student table.
+
+b. Add a primary key constraint for the student table. The constraint column is sno.
+
+Screenshots:
+
+a. Take a screenshot of the command for adding the column and the output, and save
+the image as 2-5-1spec. Mark the name of the new column in a red box in the
+screenshot.
+
+b. Take a screenshot of the command for adding the primary key constraint and the
+output, and save the image as 2-5-2sno.
+
+c. Take a screenshot of the command for adding the non-null constraint and the output, and save the image as 2-5-3sname. Mark the non-null constraint of sname in the \d+ command output in a red box.
+
+--------------------
+a. ALTER TABLE student ADD COLUMN spec INT;
+\d+ student
+
+b. ALTER TABLE student ADD CONSTRAINT student_pkey PRIMARY KEY (sno);
+
+c. ALTER TABLE student ALTER COLUMN sname SET NOT NULL;
+\d+ student
+
+--------------------
+
+
+##################
+Subtask 6: Modify a partitioned table.
+
+a. Use 75 as the splitting point to split p2 of the partitioned table test_range_part into two partitions p2_1 and p2_2. After the splitting is complete, run \d+ to output the structure of test_range_part.
+
+b. Delete the p3 partition from the partitioned table test_list_part. After the deletion, run \d+ to output the structure of test_list_part.
+
+c. Add the partition p_new whose value is (5, 7) to the partitioned table test_list_part.
+Run \d+ to output the structure of test_list_part.
+
+--------------------
+a. ALTER TABLE test_range_part
+  SPLIT PARTITION p2 AT (75) INTO (
+    PARTITION p2_1,
+    PARTITION p2_2
+  );
+
+\d+ test_range_part
+
+b. ALTER TABLE test_list_part
+  DETACH PARTITION p3;
+
+DROP TABLE p3;
+\d+ test_list_part
+
+c. CREATE TABLE p_new PARTITION OF test_list_part
+  FOR VALUES IN (5, 7);
+
+\d+ test_list_part
+--------------------
+
+
+
+##################
+
+Subtask 7: Create an index.
+
+a. Create an index named test Icname_index for the cname column of the course table,
+and select hash as the index creation method. After the index is created, run \d+ to
+output the structure of the course table.
+
+b. Create an index named test_score_index for the sno and cno columns in the score
+table, and select B-tree as the index creation method. After the index is created, run \d+ to output the structure of the score table.
+
+Screenshots:
+a. Take a screenshot of the command for creating the course table index and the output, and save the image as 2-7-1test-cname. Mark the created index in a red box.
+
+b. Take a screenshot of the command for creating the score table index and the output, and save the image as 2-7-2test-score. Mark the created index in a red box.
+
+--------------------
+a. CREATE INDEX test_cname_index ON course USING hash (cname);
+
+\d+ course
+
+b. CREATE INDEX test_score_index ON score USING btree (sno, cno);
+
+\d+ score
+--------------------
+
+
+#################
+Subtask 8: Create a view.
+
+a. Create a data view student_view for the student data table. The result must contain the student name and age, and the view contains only male data (ssex = 'm'). After the creation is complete, run \d+ to output the structure of the student_view view.
+
+Screenshots:
+
+a. Take a screenshot of the command for creating a view and the output, and save the
+image as 2-8-1student-view.
+
+--------------------
+CREATE VIEW student_view AS
+SELECT sname, sage
+FROM student
+WHERE ssex = 'm';
+
+\d+ student_view
+
+--------------------
+
+
+##################
+Subtask 9: Add a comment to a table. 
+
+a. Add a comment ('not used column') to the spec column of the student data table.
+After the comment is added, run \d+ to output the structure of the student table.
+
+Screenshots:
+
+a. Take a screenshot of the command for adding a comment and the output, and save
+the image as 2-9-1comment-table. Mark the new comment in a red box in the
+screenshot.
+
+--------------------
+COMMENT ON COLUMN student.spec IS 'not used column';
+\d+ student
+
+--------------------
+
+
+################
+Subtask 10: Create a function.
+
+a. Create a function named test_func. The specified language is SQL. The function has two input parameters of the int type and a return value of the int type. The function is used to return the sum of the two input parameters. After the creation is successful, call the test_func function to calculate the result of 4 + 6.
+
+Screenshots:
+
+a.Take a screenshot of the command for creating the function and the output, and save the image as 2-10-1test-func.
+
+--------------------
+CREATE FUNCTION test_func(a INT, b INT) RETURNS INT AS $$
+  SELECT a + b;
+$$ LANGUAGE SQL;
+
+SELECT test_func(4, 6);
+--------------------
+
+
+#################
+Subtask 11: Modify a function.
+
+a. Rename the function test_func to test_func1.
+
+b. Create a schema named test_schema and change the namespace of the test_func1
+function to func_schema.
+
+Screenshots:
+
+a. Take a screenshot of the command for renaming the function and the output, and
+save the image as 2-11-1test-func1.
+
+b. Take a screenshot of the command for creating the schema and the output, and save
+the image as 2-11-2test-schema.
+--------------------
+a. ALTER FUNCTION test_func(INT, INT) RENAME TO test_func1;
+
+b. CREATE SCHEMA func_schema;
+
+ALTER FUNCTION test_func1(INT, INT) SET SCHEMA func_schema;
+--------------------
+
+###################
+Subtask 12: Insert data. 
+
+Switch to the test database and perform the following operations.
+
+a. Run a command to insert the following four groups of data into the student table.
+(20231181, Jack, m, 20)
+(20231182, Tom, m, 18)
+(20231183, Rose, f, 20)
+(20231184, Mary, f, 19)
+
+b. Run a command to insert the following five groups of data into the course table.
+(1, English)
+(2, Math)
+(3. Arts)
+(4, Music)
+--------------------
+a. INSERT INTO student (sno, sname, ssex, sage) VALUES
+(20231181, 'Jack', 'm', 20),
+(20231182, 'Tom', 'm', 18),
+(20231183, 'Rose', 'f', 20),
+(20231184, 'Mary', 'f', 19);
+
+b. INSERT INTO course (cno, cname) VALUES
+(1, 'English'),
+(2, 'Math'),
+(3, 'Arts'),
+(4, 'Music');
+--------------------
+
+
+#################
+Subtask 13: Query simple data. 
+
+a. View Jack's information in the student table.
+
+b. Check the number of male and female students in the student table. The query result must contain ssex (gender) and count.
+
+c. Check the average age of all students in the student table.
+
+Screenshots:
+
+a. Take a screenshot of the command for viewing Jack's information and the output, and save the image as 2-13-1jack.
+
+b. Take a screenshot of the command for viewing the number of male and female
+students and the output, and save the image as 2-13-2num.
+
+c. Take a screenshot of the command for viewing the average age and the output, and
+save the image as 2-13-3avg.
+
+--------------------
+a. SELECT * FROM student WHERE sname = 'Jack';
+
+b. SELECT ssex, COUNT(*) AS count FROM student GROUP BY ssex;
+
+c. SELECT AVG(sage) AS average_age FROM student;
+--------------------
+
+
+###############
+Subtask 14: Jointly query multiple tables.
+
+a. Query the student ID of Jack and the total and average scores of all courses.
+
+b. Jointly query the names of students who have taken the Math course by using three
+tables.
+
+c. Query the names of students who have taken all courses.
+
+
+Screenshots:
+
+a. Take a screenshot of the command for querying Jack's information and the output,
+and save the image as 2-14-1select-jack.
+
+b. Take a screenshot of the command for querying students who have taken the Math
+course and the output, and save the image as 2-14-2select-math.
+
+c. Take a screenshot of the command for querying students who have taken all courses
+and the output, and save the image as 2-14-3seleect-name.
+--------------------
+a. SELECT s.sno, 
+       SUM(sc.grade) AS total_score, 
+       AVG(sc.grade) AS average_score
+FROM student s
+JOIN score sc ON s.sno = sc.sno
+WHERE s.sname = 'Jack'
+GROUP BY s.sno;
+
+
+b. SELECT DISTINCT s.sname
+FROM student s
+JOIN score sc ON s.sno = sc.sno
+JOIN course c ON sc.cno = c.cno
+WHERE c.cname = 'Math';
+
+
+c. SELECT s.sname
+FROM student s
+WHERE NOT EXISTS (
+  SELECT c.cno FROM course c
+  WHERE NOT EXISTS (
+    SELECT sc.sno FROM score sc
+    WHERE sc.sno = s.sno AND sc.cno = c.cno
+  )
+);
+--------------------
+
+
+###############
+Subtask 15: Modify data.
+
+a. Increase the age of all boys in the student table by one year, and output all data in the student table after the modification.
+
+b. Change the score of Rose's courses to 80, and output all data whose score is 80 in the score table.
+
+Screenshots:
+
+a. Take a screenshot of the data modification command and the output, and save the
+image as 2-15-1age.
+
+b. Take a screenshot of the data modification command and the output, and save the
+image as 2-15-2score.
+
+--------------------
+a. UPDATE student
+SET sage = sage + 1
+WHERE ssex = 'm';
+
+SELECT * FROM student;
+
+
+b. UPDATE score
+SET grade = 80
+WHERE sno = (SELECT sno FROM student WHERE sname = 'Rose');
+
+SELECT * FROM score WHERE grade = 80;
+--------------------
+
+
+###############
+Subtask 16: Delete data.
+
+a. Delete all the scores of Jack from the score table and export all the data in the score table after the deletion is successful.
+
+Screenshots:
+a. Take a screenshot of the data deletion command and the output, and save the image
+as 2-16-1delectjack.
+
+--------------------
+DELETE FROM score
+WHERE sno = (SELECT sno FROM student WHERE sname = 'Jack');
+
+SELECT * FROM score;
+--------------------
+
+##################
+Subtask 17: Create a user.
+
+a. Create the user test_user and set the password to openGauss@123.
+
+Screenshots:
+a. Take a screenshot of the creation command and the output, and save the image as 2-17-1create-user.
+--------------------
+
+CREATE USER test_user WITH PASSWORD 'openGauss@123';
+
+--------------------
+
+#################
+Subtask 18: Manage users.
+
+a. Rename user test_user to test_role.
+b. Set the password of user test_role to Gauss@123.
+c. Set the user of the current session to test_role and reset the user to the original user after the setting is complete.
+
+Screenshots:
+a. Take a screenshot of the command for renaming the user and the output, and save
+the image as 2-18-1test-role.
+
+b. Take a screenshot of the command for setting the password and the output, and save
+the image as 2-18-2passwd.
+
+C. Take a screenshot of the command for switching session users and the output, and
+save the image as 2-18-3session.
+
+--------------------
+a. ALTER USER test_user RENAME TO test_role;
+
+b. ALTER USER test_role WITH PASSWORD 'Gauss@123';
+
+c.SET SESSION AUTHORIZATION test_role;
+
+##After your operations, reset to original user:
+
+RESET SESSION AUTHORIZATION;
+--------------------
+
+###################
+Subtask 19: Set user permissions. 
+
+a. Grant all permissions of the student data table to the user test_role.
+
+b. Grant the use and creation permissions of the test_schema schema to the user test_role.
+
+C. Revoke the creation permission of the test_schema schema from the user test_role.
+
+Screenshots:
+a.Take a screenshot of the command for setting permissions and the output, and save
+the image as 2-19-1add.
+
+b. Take a screenshot of the command for setting the schema permissions and the output, and save the image as 2-19-2permission.
+
+c. Take a screenshot of the command for revoking the schema permission and the output, and save the image as 2-19-3recover.
+
+--------------------
+a. GRANT ALL PRIVILEGES ON TABLE student TO test_role;
+
+b. GRANT USAGE, CREATE ON SCHEMA test_schema TO test_role;
+
+c. REVOKE CREATE ON SCHEMA test_schema FROM test_role;
+
+--------------------
+
+###################
+Task 3: Database Security
+Subtask 1: Fine-tune slow SQL statements.
+
+Switch to the test database.
+#su - omm
+$gsql -d test -p 15432 -r
+Prepare the table abc in the database. The table creation statement and data insertion statement are as follows.
+
+CREATE TABLE abc (aaa int4);
+
+insert into abc values(generate_series (1, 30000));
+
+a. The following describes the statement select * from abc where aaa < 1000 order by
+aaa limit 100 for update; as statement S. View the execution plan of statement S (the ANALYZE option is required).
+
+b. According to the execution plan, a sequential scan is performed in LockRows state. Therefore, this statement locks the tuples that meet the filter criteria in the abc table (999 rows are locked), which reduces the service concurrency performance. Fine-tune the data table to ensure that non-target rows are not affected when rows are locked. (Only 100 target rows specified by LIMIT are locked.) After the tuning is complete, check the execution plan of statement S (with the ANALYZE option) and mark the number of locked rows in LockRows in a red box. (Note: You can change sequential scan to index scan.)
+
+
+Screenshots:
+a.Take a screenshot of the execution plan command and the output, and save the image
+as 3-1-1analyze.
+
+b. Take a screenshot of the tuning command and the output, and save the image as 3-1-2 lockRows.
+
+--------------------
+step 1: CREATE TABLE abc (aaa int4);
+INSERT INTO abc SELECT generate_series(1, 30000);
+
+a. SELECT * FROM abc WHERE aaa < 1000 ORDER BY aaa LIMIT 100 FOR UPDATE;
+
+b. CREATE INDEX idx_aaa ON abc(aaa);
+
+SELECT * FROM abc WHERE aaa < 1000 ORDER BY aaa LIMIT 100 FOR UPDATE;
+--------------------
+
+##################
+Subtask 2: Connect to a fully-encrypted database.
+
+a. Use gsql to connect to the database and enable the encryption function.
+
+Screenshots:
+a. Take a screenshot of the command for connecting to the fully-encrypted database and save the image as 3-2-1conn.
+
+--------------------
+a . gsql -d your_database_name -U your_user_name -W --sslmode=require
+
+##If additional SSL parameters (certificates, keys) are needed,ude it:
+
+gsql -d your_database_name -U your_user_name -W --sslmode=require \
+--sslrootcert=path/to/ca.crt --sslcert=path/to/client.crt --sslkey=path/to/client.key
+
+--------------------
+
+##################
+Subtask 3: Create a client master key (CMK) and a column encryption key (CEK).
+
+a. Create a CMK in the gsql environment. (Note: The key object name is
+client_master_key1, KEY_STORE is set to localkms, KEY_PATH is set to
+"key_path_value1", and the encryption algorithm type is set to RSA_2048) The
+localkms directory must be created in /gaussdb/app/etc/.
+
+b.Create a CEK in the gsql environment. (Note: The key object name is
+column_encryption_key1, CLIENT_MASTER_KEY is set to client_master_key1, and
+
+--------------------
+a. mkdir -p /gaussdb/app/etc/localkms
+
+CREATE CLIENT MASTER KEY client_master_key1
+WITH (
+  KEY_STORE = 'localkms',
+  KEY_PATH = 'key_path_value1',
+  ALGORITHM = 'RSA_2048'
+);
+
+b. CREATE COLUMN ENCRYPTION KEY column_encryption_key1
+WITH VALUES (
+  CLIENT_MASTER_KEY = client_master_key1,
+  ALGORITHM = 'RSA_2048'
+);
+
+--------------------
+
+##################
+Subtask 4: Create an encrypted table. 
+
+a. Create an encrypted table in the gsql connection environment. 
+(Note:column_encryption_key is set to column_encryption_key1 and encryption_type is
+set to DETERMINISTIC.)
+
+info: table name: creditcard_info 
+column name: id_number value(1),name value(joe),credit_card value(1234567890)
+
+
+Screenshots:
+a.Take a screenshot of the command for creating an encryption table and save the
+image as 3-4-1cmk-table.
+
+--------------------
+CREATE TABLE creditcard_info (
+    id_number INT ENCRYPTED WITH (COLUMN_ENCRYPTION_KEY = column_encryption_key1, ENCRYPTION_TYPE = DETERMINISTIC),
+    name VARCHAR(50) ENCRYPTED WITH (COLUMN_ENCRYPTION_KEY = column_encryption_key1, ENCRYPTION_TYPE = DETERMINISTIC),
+    credit_card VARCHAR(20) ENCRYPTED WITH (COLUMN_ENCRYPTION_KEY = column_encryption_key1, ENCRYPTION_TYPE = DETERMINISTIC)
+);
+
+INSERT INTO creditcard_info VALUES (1, 'joe', '1234567890');
+
+--------------------
+
+########################
+Subtask 5: Insert data into an encrypted table and query the table.  
+
+a. Insert data into the encrypted table in the gsql connection environment. The data
+information is (1,'joe','6217986500001288393').
+b. Use the non-encrypted gsql client to query ciphertext data in the table.
+
+Screenshots:
+a.Take a screenshot of the command for inserting data into the encryption table and
+save the image as 3-5-1Insert.
+
+b. Take a screenshot of the command for querying data in the table and save the image as 3-5-2gsql.
+--------------------
+a. INSERT INTO creditcard_info VALUES (1, 'joe', '6217986500001288393');
+
+b. SELECT * FROM creditcard_info;
+
+--------------------
