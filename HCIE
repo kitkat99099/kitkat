@@ -1,0 +1,656 @@
+\\ CH 1 //
+
+---> Transaction Isolation 
+--> Open session1, begin a transaction, insert data, and query the data.
+begin; 
+delete from tb1;
+insert into tb1(att1,att2) values(2,2); 
+select * from tb1; 
+-> Open session2 and query table tb1.
+select * from tb1;
+-> Commit the transaction in session1.
+commit; 
+-> In session2, continue to query table tb1.
+ select * from tb1;
+
+--->  Transaction Consistency
+--> Create a transaction order table, insert data, and initialize the payer's account balance to CNY20 and the store's account balance to CNY500.
+create table orders(name varchar(32), amount integer);
+insert into orders values('customer', 20);
+insert into orders values('shop', 500); 
+SELECT * FROM ORDERS;
+
+--> After initialization, begin a transaction, and simulate a transaction in which the person pays CNY10 and the store's account receives CNY10.
+begin;
+update orders set amount=10 where name='customer'; 
+update orders set amount=510 where name='shop';
+ select * from orders;
+
+--> Commit the transaction.
+commit;
+
+---> READ COMMITTED 
+--> Dirty read.
+Open two windows: session1 and session2. The default isolation level of the database is 
+READ COMMITTED. Therefore, you do not need to reset the isolation level of the 
+database. 
+1. Query table tb2 in session1. The query result is empty.
+2. Start a transaction in session2 and insert data.
+3. Query table tb2 in session1. The result is still empty. 
+4. Commit the transaction in session2. 
+5. Query table tb2 in session1. You can see the data inserted in session2.
+Session1:
+begin; 
+select * from tb2; 
+ 
+Session2:
+begin; 
+insert into tb2 values(1,1); 
+select * from tb2;
+commit;
+select * from tb2;
+
+---> REPEATABLE READ
+--> Open two windows: session1 and session2. The default isolation level of the database is 
+READ COMMITTED. Therefore, you do not need to reset the isolation level of the 
+database. 
+1. Set the isolation levels of session1 and session2 to REPEATABLE READ and view the 
+isolation levels. 
+2. Start a transaction in session1 and query table tb3. The query result is empty. 
+3. Start a transaction in session2 and insert data. 
+4. Query table tb3 in session1. The result is still empty. 
+5. Commit the transaction in session2. 
+6. Query table tb3 in session1. The query result is still empty.
+
+Session1: 
+set 
+default_transaction_isolation= 'REPEATABLE READ';    
+show transaction_isolation;    
+begin;
+select * from tb3;
+insert into tb3 values(1,1); 
+select * from tb3;
+select * from tb3; 
+
+Session2: 
+set
+default_transaction_isolation='REPEATABLE READ';
+show transaction_isolation; 
+begin;
+commit; 
+
+
+--->Subtransactions
+-->  BEGIN...END 
+BEGIN 
+INSERT INTO tb4 VALUES(1,1); 
+INSERT INTO tb4 VALUES(2,2); 
+UPDATE TEST SET att1=3, att2=3 WHERE att1=1; 
+RAISE INFO 'ERROR OCCURS'; 
+END; 
+INSERT INTO tb4 VALUES(4,4); 
+END; 
+
+-->  BEGIN...SAVEPOINT...COMMIT/ROLLBACK
+CREATE TABLE tb5(att1 int,att2 int); 
+begin;
+INSERT INTO tb5 VALUES(1,1);
+SAVEPOINT S1; 
+INSERT INTO tb5 VALUES(2,2); 
+INSERT INTO tb5 VALUES(3,3);
+
+--> Roll back to the savepoint S1. If the data inserted after the savepoint S1 does not exist, the rollback to S1 is successful. 
+ROLLBACK TO SAVEPOINT S1;
+SELECT * FROM tb5;
+
+--> Create savepoint S2.
+SAVEPOINT S2;
+INSERT INTO tb5 VALUES(4,4);
+ROLLBACK TO SAVEPOINT S2;
+
+--> Release savepoint S2. 
+RELEASE SAVEPOINT S2;
+SELECT * FROM tb5;
+
+--> Create savepoint S3. 
+SAVEPOINT S3; 
+INSERT INTO tb5 VALUES(5,5);
+RELEASE SAVEPOINT S3; 
+
+---> Viewing Lock Information
+--> Check the ID of the current session.
+SELECT pg_backend_pid( );
+
+--> Search for the lock added to the current session.
+SELECT locktype,database,relation,pid,mode FROM pg_locks WHERE pid= 281450093779312; 
+
+--> Query the relation ID of table tb6. 
+ SELECT oid FROM pg_class WHERE relname='tb6'; 
+
+---> Reproducing a Shared Lock
+--> Start a transaction and place a shared lock.
+BEGIN;
+CREATE INDEX idx_att1 ON tb6(att1);
+SELECT locktype,database,relation,pid,mode FROM pg_locks WHERE pid= 281450093779312; 
+
+--> Perform the INSERT operation. 
+ insert into tb6 values(2,2);
+
+--> Perform the SELECT operation.
+select * from tb6; 
+
+--> Commit the transaction and release the shared lock.
+commit;
+insert into tb6 values(2,2); 
+
+---> Reproducing ACCESS SHARE Locks
+--> Query the PID of the current session. 
+SELECT pg_backend_pid( );
+
+--> Start a transaction, query the table, and place a lock.
+BEGIN; 
+SELECT * FROM tb6;
+SELECT locktype,database,relation,pid,mode FROM pg_locks WHERE pid= 281449887013232; 
+
+--> Perform the SELECT operation. 
+SELECT * FROM tb6; 
+
+--> Perform the ALTER operation.
+ alter table tb6 add(att3 varchar(10));
+
+--> Commit the transaction and release the lock.
+commit;
+alter table tb6 add(att3 varchar(10));
+
+---> Reproducing a ROW EXCLUSIVE Lock  
+--> Query the PID of the current session.
+SELECT pg_backend_pid( ); 
+
+--> Start a transaction, modify table data, and place a lock.
+begin;
+UPDATE tb6 SET att1 = 3 ,att2 = 3 where att1=1;
+SELECT locktype,database,relation,pid,mode FROM pg_locks WHERE pid= 281449887013232; 
+
+--> Perform the CREATE INDEX operation.
+CREATE INDEX idx_att2 ON tb6(att2); 
+
+-->Commit the transaction in the first session. 
+commit;
+CREATE INDEX idx_att2 ON tb6(att2); 
+
+---> Reproducing an ACCESS EXCLUSIVE Lock 
+--> Query the PID of the current session.
+SELECT pg_backend_pid( );
+
+--> Start a transaction, modify the table structure, and place a lock.
+BEGIN;
+ALTER TABLE tb6 ADD(att4 varchar(10)); 
+SELECT locktype,database,relation,pid,mode FROM pg_locks WHERE pid=281449983678832; 
+
+--> Perform the SELECT operation. 
+SELECT * FROM tb6;
+
+--> Commit the transaction in the first session.
+commit;
+SELECT * FROM tb6;
+
+\\ CH 2 //
+
+---> Storage Management
+--> Compiling a Database  la root amana anwsen
+sed -i s/gpgcheck=1/gpgcheck=0/g /etc/yum.repos.d/openEuler.repo 
+yum -y install -y readline-devel
+yum -y install libaio-devel 
+yum -y install bison 
+yum -y install flex
+
+--> Create a user group and user for compiling the database.
+groupadd gsgrp
+useradd -g gsgrp -u 1001 -d /home/gslab gslab 
+
+--> Set a password of the gslab user.
+passwd gslab
+
+--> Log in as the gslab user
+su - gslab 
+
+--> Create the opengauss-compile directory for compiling openGauss. 
+mkdir opengauss-compile
+cd opengauss-compile/
+
+--> You can run the wget command on the ECS to download the package. 
+wget  https://opengauss.obs.cn-south-1.myhuaweicloud.com/3.0.0/openGauss-third_party_binarylibs.tar.gz
+
+--> Decompress the openGauss source code package openGauss-server-v3.0.0.zip.
+unzip openGauss-server-v3.0.0.zip 
+
+--> Decompress the third-party library binary package openGauss third_party_binarylibs.tar.gz. 
+tar -zxvf openGauss-third_party_binarylibs.tar.gz 
+
+--> Rename the directory of the third-party library binary package to binarylibs-v3.0.0.
+mv openGauss-third_party_binarylibs binarylibs-v3.0.0 
+
+--> Use the vim editor to edit the ~/.bashrc file and add environment variables. 
+vim ~/.bashrc
+
+--> Configure the following environment variables in the .bashrc file: 
+export CODE_BASE=/home/gslab/opengauss-compile/openGauss-server-v3.0.0 # Path of the 
+openGauss-server file 
+export BINARYLIBS=$CODE_BASE/../binarylibs-v3.0.0 
+export GAUSSHOME=$CODE_BASE/dest 
+export GCC_PATH=$BINARYLIBS/buildtools/openeuler_aarch64/gcc7.3 
+export CC=$GCC_PATH/gcc/bin/gcc 
+export CXX=$GCC_PATH/gcc/bin/g++ 
+export 
+LD_LIBRARY_PATH=$GAUSSHOME/lib:$GCC_PATH/gcc/lib64:$GCC_PATH/isl/lib:$GCC_PATH/mpc/lib/:
+$GCC_PATH/mpfr/lib/:$GCC_PATH/gmp/lib/:$LD_LIBRARY_PATH 
+export PATH=$GAUSSHOME/bin:$GCC_PATH/gcc/bin:$PATH 
+
+--> Run the source command for the environment variables to take effect. 
+source ~/.bashrc
+
+--> Go to the openGauss-server directory and prepare for compilation.
+cd openGauss-server-v3.0.0
+
+--> Run the configure script to perform the configuration before compilation. To perform debugging, set the version to debug. 
+./configure --gcc-version=7.3.0 CC=g++ CFLAGS='-O0' -prefix=$GAUSSHOME --3rd=$BINARYLIBS --enable-debug --enable-cassert --enable-thread-safety --with-readline --without-zlib  
+
+
+--> Run the make command to perform compilation. The -j4 option of the make command specifies parallel compilation using 4 processes.
+make -j4
+make clean
+
+--> Install openGauss. 
+make install
+
+--->Starting openGauss
+--> Initialize the database.  Run the following gs_initdb command to initialize openGauss:
+gs_initdb --pgdata=$GAUSSHOME/data -- nodename=dblab --encoding=utf-8
+--> start database
+gs_ctl start -D $GAUSSHOME/data -Z single_node -l logfile
+
+--> Check the running status of the database server.
+gs_ctl status -D $GAUSSHOME/data
+
+--> (Optional) To stop the database server, run the following command: 
+gs_ctl stop -D $GAUSSHOME/data -Z single_node -l logfile
+
+--> Connect to the database.
+gsql postgres -r
+
+---> Installing the pageinspect Plug-in 
+--> Go to the pageinspect directory. 
+cd /home/gslab/opengauss-compile/openGauss-serverv3.0.0/contrib/pageinspect
+
+--> View the file content in the pageinspect directory. 
+ll
+
+--> Compile the pageinspect plug-in. 
+make
+
+--> Install the pageinspect plug-in.
+make install 
+
+--> Change the password of the gslab user. Log in to the postgres database and change the password of the gslab user. 
+ALTER ROLE gslab password 'openGauss@123';
+
+ --> Create the pageinspect plug-in in the postgres database
+CREATE EXTENSION pageinspect; 
+
+--> Check whether pageinspect is successfully installed.
+SELECT * FROM pg_extension; 
+
+--> Using the pageinspect Plug-in to Analyze the Page Structure of a Table 
+CREATE TABLE tb7(att1 int,att2 int);
+-->Viewing the Page Header Structure of a Table
+SELECT* FROM page_header(get_raw_page('tb7', 0));  this line erorr
+--> Insert the first tuple and view the page header structure. 
+INSERT INTO tb7 VALUES(1,1);
+--> Run the following statement to view the page header structure:
+SELECT* FROM page_header(get_raw_page('tb7', 0)); 
+--> Insert the second tuple and view the page header structure.
+INSERT INTO tb7 VALUES(2,2);
+--> Run the following statement to view the page header structure: 
+SELECT* FROM page_header(get_raw_page('tb7', 0));
+--> Insert the last seven tuples and check the page header structure. 
+INSERT INTO tb7 VALUES(3,3); 
+INSERT INTO tb7 VALUES(4,4); 
+INSERT INTO tb7 VALUES(5,5); 
+INSERT INTO tb7 VALUES(6,6); 
+INSERT INTO tb7 VALUES(7,7); 
+INSERT INTO tb7 VALUES(8,8); 
+INSERT INTO tb7 VALUES(9,9);
+--> Run the following statement to view the page header structure: 
+SELECT* FROM page_header(get_raw_page('tb7', 0));
+
+---> Viewing Tuple Data on a Page
+--> Run the following command to view tuple data on a page: 
+SELECT * FROM heap_page_items(get_raw_page('tb7', 0)); 
+
+---> Viewing Original Data on a Page 
+--> Run the following command to view original data on a page: 
+SELECT get_raw_page::text FROM get_raw_page('tb7', 0); 
+
+// CH 3 \\
+
+---> Viewing WAL Files
+--> Log in as the root user and switch to the omm user. 
+su – omm 
+--> Check the startup mode of the database. 
+gs_om -t status --detail 
+--> Check that the database is started. 
+gs_om -t start 
+--> Use the gsql client to log in to the postgres database by running the following command: 
+gsql -d postgres -p 26000 -r
+--> Check the size of the WAL segment file in the current system.
+show wal_segment_size; 
+--> View the physical form of WAL segment files. 
+cd /opt/huawei/install/data/dn/pg_xlog/
+ll
+--> Check the LSN of the current WAL, and the file name and offset of the current WAL segment.
+gsql -d postgres -p 26000 -r   --login
+select pg_current_xlog_location();    -- Call the function.
+select pg_current_xlog_insert_location();     -- Call the function. 
+select gs_current_xlog_insert_end_location();      -- Call the function.     
+
+--> Based on the LSN, check the file name of the WAL segment and the offset of the WAL segment file. 
+select pg_xlogfile_name('0/2461670'),pg_xlogfile_name_offset('0/2461670');
+ select x'461670'::int;
+
+---> Parsing WAL Files 
+--> Download the mog_xlogdump toolkit.
+cd /home/omm
+ wget https://cdn-mogdb.enmotech.com/mogdb-media/5.0.5/Kylin_arm64/Toolkits-5.0.5-Kylin-arm64.tar.gz 
+
+--> Decompress the mog_xlogdump toolkit. 
+tar -zvxf Toolkits-5.0.5-Kylin-arm64.tar.gz 
+ll
+
+--> Copy the mog_xlogdump commands to the bin directory in the openGauss installation path. 
+cp /home/omm/toolkits/mog_xlogdump/mog_xlogdump /opt/huawei/install/app/bin/ 
+
+--> Modify wal_level to logical.
+vim /opt/huawei/install/data/dn/postgresql.conf 
+Locate wal_level (line 197) and change hot_standby to logical, as shown in the following figure. 
+
+--> Set the database to allow the remote login. 
+ vim /opt/huawei/install/data/dn/pg_hba.conf 
+Add the following content under # IPv4 local connections in the file: 
+host   all    0.0.0.0/0   sha256 
+
+--> Restart the database and reload the configuration file. 
+ gs_om -t restart
+
+--> Set Replica Identity of table t2 to FULL.
+alter table t2 replica identity full;
+
+--> After the modification is successful, check the structure of table t2. 
+\d+ t2 
+
+--> Check the name of the WAL file based on its actual LSN.  
+select pg_xlogfile_name('0/273D788'); 
+
+--> Go to the /opt/huawei/install/app/bin directory and add the OID and WAL files to the following commands:
+cd /opt/huawei/install/app/bin 
+./mog_xlogdump -o 16387 -R int,money,inet,bool,numeric,text /opt/huawei/install/data/dn/pg_xlog/000000010000000000000002
+
+--> Check whether WAL segment files exist in the pg_xlog directory.
+cd /opt/huawei/install/data/dn/pg_xlog
+ll
+mog_xlogdump -n 10 /opt/huawei/install/data/dn/pg_xlog/000000010000000000000002 
+
+--> View the statistics of WAL files.
+select pg_current_xlog_insert_location(),pg_xlogfile_name(pg_current_xlog_insert_location());
+
+--> Add the LSN (0/2742670) of the current WAL file into the following command and run the command:
+mog_xlogdump -z /opt/huawei/install/data/dn/pg_xlog/000000010000000000000002 -s 0/2742670
+
+---> Task 4: Using WALs to Implement PITR for Databases
+--> Before performing physical backup, check the number of database tables. 
+ gsql -d postgres -p 26000 -r 
+\d 
+--> Create a physical backup directory. 
+\q 
+mkdir -p /home/omm/backup 
+
+--> Start physical backup.
+ ifconfig 
+
+--> 192.168.0.38 is the private IP address of the server. Add this IP address to the following command to start backup: 
+gs_basebackup -D /home/omm/backup -h 192.168.0.38 -p 26000
+
+--> Go to the backup directory and run the ll command to view the files that are successfully backed up. The details are as follows: 
+cd /home/omm/backup/
+ll
+cat backup_label 
+
+--> After the backup is complete, add a table and insert data into the table.
+CREATE TABLE testPITR1 AS SELECT * FROM pg_class;
+select count(*) from testpitr1;
+
+--> After a table and data are added, create a restoration point restore_point_1. 
+SELECT pg_create_restore_point('restore_point_1');
+
+--> Copy WALs to a specified directory.
+ \q 
+
+--> Create the archive directory for storing backups of pg_xlog. 
+ mkdir -p /home/omm/archive 
+
+--> Run the following command to copy the data in the pg_xlog directory to the /home/omm/archive directory: 
+cp -r /opt/huawei/install/data/dn/pg_xlog/* /home/omm/archive/ 
+ll
+
+---> Use WALs and backups to perform PITR
+--> Shut down the database. 
+gs_om -t stop
+
+--> Clear all files in the data directory (/opt/huawei/install/data/dn/) of the current database: 
+rm -rf /opt/huawei/install/data/dn/*
+
+--> Copy the full backup file in /home/omm/backup/ to the /opt/huawei/install/data/dn/ directory. 
+cp -r /home/omm/backup/* /opt/huawei/install/data/dn/
+
+--> Copy the WAL files to the directory. 
+ cp -r /home/omm/archive/* /opt/huawei/install/data/dn/pg_xlog/
+
+--> Create the recovery.conf file in the /opt/huawei/install/data/dn directory. This file is used to configure the restoration progress. 
+vim /opt/huawei/install/data/dn/recovery.conf 
+recovery_target_name = 'restore_point_1' 
+
+--> In this case, the data file is restored to restore_point_1 in the configuration file. 
+Restart the database and log in to the database to check whether the created table exists. 
+gs_om -t start
+gsql -d postgres -p 26000 -r 
+\d 
+
+--> Checking and Clearing System Logs
+cd /var/log/omm/omm
+ll
+
+--> Log in to the database server as the omm user and go to the directory where system logs are stored. 
+cd /var/log/omm/omm/pg_log/dn_6001 
+ll
+
+--> View the content of a system run log. 
+cat postgresql-2024-04-03_105858.log
+
+--> Delete logs related to system running. 
+rm -f postgresql-2024-04-03_105858.log
+ll
+
+--> View logs generated during installation and deployment
+cd /var/log/omm/omm/om 
+ll
+
+--> View logs generated during preinstallation
+cat gs_preinstall-2024-03-25_203913.log
+
+--> Delete logs generated during preinstallation and installation.
+rm -f gs_preinstall-2024-03-25_203913.log
+rm -f gs_preinstall-2024-03-25_203913.log 
+
+--> View a performance log. 
+ll
+gs_checkperf -i PMK --detail
+
+--> View the content in a performance log.
+cat gs_checkperf-2024-04-03_113205.log 
+
+--> Delete the performance log.
+rm -f gs_checkperf-2024-04-03_113205.log
+
+--> Check and clear a gs_guc log. 
+cd /var/log/omm/omm/bin/gs_guc
+ll
+cat gs_guc-2024-03-25_204312-current.log 
+rm -f gs_guc-2024-03-25_204312-current.log 
+
+--> Check and clear a slow SQL log. 
+cd /var/log/omm/omm/sql_monitor/dn_6001
+ll
+--> Run the following command to view the content in a slow SQL log: 
+cat slow_query_log-2024-03-28_000000.log 
+rm -f slow_query_log-2024-03-28_000000.log 
+
+--> Check and clear a gs_ctl log. 
+cd /var/log/omm/omm/bin/gs_ctl/ 
+ll
+
+--> Run the following command to delete the gs_ctl log: 
+rm -f gs_ctl-2024-03-25_204315-current.log
+
+// CH 4 \\
+
+---> SQL Execution Engine
+--> Perform simple queries using EXPLAIN. 
+explain select id from test where id > 50; 
+
+--> The query statement for the condition id < 20 is as follows: 
+explain select id from test  where id < 20; 
+
+--> Add the AND query condition to EXPLAIN
+explain select id from test where id < 20 and age > 0;
+
+--> Perform the AND query again. 
+explain select id from test where id < 20 and age > 0;
+
+--> Execute the subquery statement using EXPLAIN. 
+EXPLAIN SELECT * FROM ( SELECT name, salary FROM employees WHERE salary > ( SELECT AVG(salary) FROM employees )
+ORDER BY salary DESC LIMIT 10 ) AS top_earners WHERE salary > ( SELECT AVG(salary) FROM employees ); 
+
+--> Execute the query statement using EXPLAIN ctid. 
+EXPLAIN SELECT * FROM employees WHERE ctid = '(0,1)';
+
+--> Execute the function query statement using EXPLAIN. 
+EXPLAIN SELECT * FROM generate_series(1, 10);
+
+--> Create the departments table to implement the join operation. 
+CREATE TABLE departments ( department_id SERIAL PRIMARY KEY, department_name VARCHAR(50) ); 
+
+--> Execute the hash join query statement using EXPLAIN. 
+EXPLAIN SELECT e.name, d.department_name FROM employees e JOIN departments d ON e.department = d.department_name; 
+
+--> Use EXPLAIN analyze to print an execution plan. 
+EXPLAIN analyze SELECT e.name, d.department_name FROM employees e 
+JOIN departments d ON e.department = d.department_name;
+
+--> Disable hash join and enable merge join. 
+SET enable_hashjoin = off; 
+set enable_mergejoin = on; 
+
+--> Execute the merge join query statement using EXPLAIN.
+EXPLAIN SELECT e.name, d.department_name FROM employees e 
+JOIN departments d ON e.department = d.department_name;
+
+--> Use EXPLAIN analyze to print an execution plan.
+EXPLAIN analyze SELECT e.name, d.department_name FROM employees e 
+JOIN departments d ON e.department = d.department_name;
+
+---> Nested Loop Join Operators 
+--> Disable hash join and merge join.
+SET enable_hashjoin = off; 
+SET enable_mergejoin = off;
+
+--> Execute the query statement using EXPLAIN.
+EXPLAIN SELECT e.name, d.department_name FROM employees e 
+JOIN departments d ON e.department = d.department_name; 
+
+--> Insert 100,000 data records.
+DO $$ DECLARE iter INTEGER; 
+BEGIN 
+  FOR iter IN 1..100000 LOOP 
+      INSERT INTO employees (name, age, salary, department) 
+      VALUES ('Alice', 30, (RANDOM() * (100000 - 10000) + 10000)::INT, 'HR'); 
+  END LOOP; 
+END $$; 
+
+--> Use hash join, merge join, and nested loop join to perform the test. Hash join connection test:
+SET enable_hashjoin = on; 
+SET enable_mergejoin = on; 
+EXPLAIN analyze SELECT e.name, d.department_name FROM employees e JOIN departments d ON e.department = d.department_name; 
+
+--> Merge join connection test: 
+SET enable_hashjoin = off;
+EXPLAIN analyze SELECT e.name, d.department_name 
+FROM employees e JOIN departments d ON e.department = d.department_name; 
+
+--> Nested loop join connection test: 
+SET enable_hashjoin = off;
+SET enable_mergejoin = off; 
+EXPLAIN analyze SELECT e.name, d.department_name 
+FROM employees e JOIN departments d ON e.department = d.department_name; 
+
+---> Control Operator Execution Plan 
+--> Execute the query statement 1 using EXPLAIN.
+EXPLAIN SELECT 'Hello World' AS greeting;
+
+--> Execute the query statement 2 using EXPLAIN.
+EXPLAIN SELECT CASE WHEN random() > 0.5 THEN 'Greater than 0.5' ELSE 'Less than or equal to 0.5' END AS random_result; 
+
+---> Limit Operators
+--> Execute the query statement using EXPLAIN LIMIT.
+EXPLAIN SELECT * FROM employees LIMIT 10;
+
+---> Append Operators 
+--> Execute the query statement using EXPLAIN. 
+XPLAIN SELECT name FROM employees UNION ALL 
+SELECT name FROM employees WHERE department = 'HR';
+
+---> Materialization Operator Execution Plan 
+--> Execute the query statement using EXPLAIN. 
+EXPLAIN SELECT name, department, salary FROM employees ORDER BY salary DESC; 
+
+--> Use EXPLAIN analyze to print query statements.
+EXPLAIN analyze SELECT name, department, salary FROM employees ORDER BY salary DESC; 
+
+--> Execute the query statement using EXPLAIN, which is the same as hash join.
+EXPLAIN SELECT e.name, d.department_name 
+FROM employees e JOIN departments d ON e.department = d.department_name;
+
+---> Unique Operators 
+-->Execute the query statement 1 using EXPLAIN.
+EXPLAIN SELECT DISTINCT department FROM employees; 
+
+--> Execute the query statement 2 using EXPLAIN.
+ EXPLAIN SELECT DISTINCT department 
+FROM ( SELECT department FROM employees ORDER BY department ) sub; 
+
+---> Aggregate Operators 
+--> Execute the aggregate function query statement using EXPLAIN.
+ EXPLAIN SELECT AVG(salary) AS average_salary FROM employees;
+
+---> Group Operators
+--> Execute the GROUP BY query statement 1 using EXPLAIN. 
+EXPLAIN SELECT department, AVG(salary) AS average_salary FROM employees GROUP BY department; 
+
+--> Execute the GROUP BY query statement 2 using EXPLAIN and disable HashAggregate. 
+SET enable_hashagg = off; 
+EXPLAIN SELECT department, AVG(salary) AS average_salary FROM employees GROUP BY department; 
+
+--> Cancel the disabling
+RESET enable_hashagg;
+
+---> SetOp Operators
+--> Execute the query statement using EXPLAIN. 
+EXPLAIN SELECT name FROM employees WHERE department = 'Sales' EXCEPT SELECT name FROM employees WHERE department = 'HR';
