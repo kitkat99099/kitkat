@@ -1,4 +1,4 @@
-\\ CH 1 //
+// CH 1 \\
 
 ---> Transaction Isolation 
 --> Open session1, begin a transaction, insert data, and query the data.
@@ -194,7 +194,7 @@ SELECT * FROM tb6;
 commit;
 SELECT * FROM tb6;
 
-\\ CH 2 //
+// CH 2 \\
 
 ---> Storage Management
 --> Compiling a Database  la root amana anwsen
