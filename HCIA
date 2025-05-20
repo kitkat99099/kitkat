@@ -1,5 +1,5 @@
-
---> lec-2  Database and Object Management
+// CH 1 \\
+-->  Database and Object Management
 
 --> Create a tablespace
 create tablespace test_tbs LOCATION '/opt/opengauss/tablespace/test_tbs1';
@@ -308,8 +308,7 @@ gsql -p 26000 postgres -r
 drop user joe;
 \q
 
-
-// lec 3 \\
+// CH 2 \\
 
 --> Querying Data 
 -->Use an asterisk (*) after SELECT to query all columns in the bank_card table. 
@@ -546,10 +545,10 @@ SELECT cast('22-oct-1997' as timestamp);
 -->  hextoraw(string) converts a hexadecimal string to RAW. 
 SELECT hextoraw('7D');
 
-// lec 4 \\
+// CH 4 \\
 skip
 
-// lec 5 \\
+// CH 5 \\
 
 ---> Database Connection Settings
 --> Modify the pg_hba.conf file of the database
@@ -773,7 +772,7 @@ DROP SCHEMA finance;
 --> Run the DROP SCHEMA....CASCADE command to delete the finance database, which will also delete the objects in the finance database.
 DROP SCHEMA finance CASCADE; 
 
-// lec 6 \\
+// CH 6 \\
 
 --> Vi/Vim 
 vim clusterconfig.xml 
@@ -867,7 +866,7 @@ cat >>/etc/profile<<EOF
 >export LD_LIBRARY_PATH=$packagePath/script/gspylib/clib:$LD_LIBRARY_PATH 
 >EOF
 
-\\ lec 7 //
+// CH 7 \\
 
 --> Viewing Database Objects
 -->View help information. 
