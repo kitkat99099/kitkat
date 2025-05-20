@@ -154,7 +154,7 @@ select pkg_service.job_update(1,sysdate,'sysdate+1',null);
 -> Delete the scheduled job.
 select pkg_service.job_cancel(1);
 
-/**/ch2/**/
+// CH 2 \\
 
 ---> Checking the Database Cluster Status
 gs_om -t status --detail 
@@ -212,7 +212,7 @@ show pgxc_node_name;
 /home/omm
 [omm@]$ ls -l
 
-/**/ch3/**/
+// CH 3 \\
 
 ---> Database Constraints
 ->Use the UNIQUE constraint to ensure that the values
@@ -480,10 +480,10 @@ END;
 /
 call proc_exp();
 
-/**/ch4/**/
+// CH 4 \\
 skip
 
-/**/ch5/**/
+// CH 5 \\
 
 --->SSL Connection Configuration
 -> Setting Up the CA Environment
@@ -644,7 +644,8 @@ openGauss=# SELECT * FROM gs_global_chain;
 openGauss=# SELECT pg_catalog.ledger_hist_repair('ledgernsp', 'usertable');
 openGauss=# SELECT pg_catalog.ledger_gchain_repair('ledgernsp', 'usertable');
 
-/**/ch6/**/
+// CH 6 \\
+
 --->Procedure
 create db, create user, grant all to user, create tb ,insert data
 
