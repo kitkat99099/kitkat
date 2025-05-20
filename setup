@@ -1,0 +1,53 @@
+[root@ecs-f239 ~]# cat >>/etc/profile<<EOF 
+> export LANG=en_US.UTF-8 
+> EOF 
+
+[root@ecs-f239 ~]# source /etc/profile 
+
+[root@ecs-f239 ~]# cd /usr/bin 
+
+[root@ecs-f239 bin] # mv python python.bak
+
+[root@ecs-f239 bin] # ln -s python3 /usr/bin/python
+
+[root@ecs-f239 bin] # python -V
+
+[root@ecs-f239 ~]# yum install libaio* -y
+
+[root@ecs-f239 bin]# mkdir -p /opt/software/openGauss 
+[root@ecs-f239 bin]# chmod 755 -R /opt/software 
+
+[root@ecs-f239 bin]# cd /opt/software/openGauss
+
+[root@ecs-f239 openGauss]# wget https://openGauss.obs.cn-south-1.myhuaweicloud.com/2.0.0/arm/openGauss-2.0.0-openEuler-64bit-all.tar.gz 
+
+[root@ecs-f239 bin]# cd /opt/software/openGauss 
+
+[root@ecs-f239 openGauss]# vi clusterconfig.xml
+##change prive ip and change nodenames.
+
+[root@ecs-f239 openGauss]# vi /etc/profile.d/performance.sh
+##keep to comment this command
+#sysctl -w vm.min_free_kbytes=112640 &> /dev/null
+
+[root@ecs-f239 openGauss]# vi /etc/profile
+
+[root@ecs-f239 openGauss]# source /etc/profile 
+
+[root@ecs-f239 openGauss]# cd /opt/software/openGauss
+
+[root@ecs-f239 openGauss]# tar -zxvf openGauss-2.0.0-openEuler-64bit-all.tar.gz
+
+[root@ecs-f239 openGauss]# tar -zxvf openGauss-2.0.0-openEuler-64bit-om.tar.gz
+
+[root@ecs-f239 openGauss]# cd /opt/software/openGauss/script/ 
+
+[root@ecs-f239 script]# python gs_preinstall -U omm -G dbgrp -X/opt/software/openGauss/clusterconfig.xml 
+
+#for answer question write yes.
+
+[root@ecs-f239 script]# chmod -R 755 /opt/software/openGauss/script/ 
+
+[root@ecs-f239 script]# su - omm 
+
+[omm@ecs- f239 ~]$ gs_install -X /opt/software/openGauss/clusterconfig.xml --gsinit-parameter="--encoding=UTF8"  --dn-guc="max_process_memory=4GB"  --dn-guc="shared_buffers=256MB" --dn-guc="bulk_write_ring_size=256MB" --dn-guc="cstore_buffers=16MB"
